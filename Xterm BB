@@ -41,6 +41,7 @@ Rayfield:Notify({
    Duration = 2,
    Image = nil,
 })
+
 local autoBuy = false
 local autoBuyTask = nil
 
@@ -153,7 +154,6 @@ end
 
 local function applyPhysicsImpulse(hrp)
     if not hrp or not hrp.Parent then return end
-
     if IMPULSE_STRENGTH and IMPULSE_STRENGTH > 0 then
         local bv = Instance.new("BodyVelocity")
         bv.Name = "__SPIN_BODYVELOCITY__"
@@ -166,7 +166,6 @@ local function applyPhysicsImpulse(hrp)
             if bv and bv.Parent then pcall(function() bv:Destroy() end) end
         end)
     end
-
     if ANGVEL_STRENGTH and ANGVEL_STRENGTH > 0 then
         local ang = Instance.new("AngularVelocity")
         ang.Name = "__SPIN_ANGVEL__"
@@ -215,10 +214,8 @@ local function startGlitchedFlyForCharacter(char)
         currentHRP = char:WaitForChild("HumanoidRootPart", 2) or getHRP(char)
     end
     if not currentHRP then return end
-
     glitchedFlying = true
     startCFrameSpin(currentHRP)
-
     if IMPULSE_INTERVAL and IMPULSE_INTERVAL > 0 then
         impulseTask = task.spawn(function()
             while glitchedFlying do
@@ -242,7 +239,7 @@ local SpinInput = MainTab:CreateInput({
    Callback = function(Text)
        local val = tonumber(Text) or 0
        inputValue = val
-       spinSpeed = inputValue 
+       spinSpeed = inputValue
        if spinSpeed ~= 0 then
            local pl = LocalPlayer
            local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
@@ -250,3 +247,29 @@ local SpinInput = MainTab:CreateInput({
                startGlitchedFlyForCharacter(char)
            end
        else
+           stopGlitchedFly()
+       end
+   end,
+})
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.08)
+    if currentHRP then
+        clearPhysicsExtras(currentHRP)
+    end
+    currentHRP = nil
+    if spinSpeed and spinSpeed ~= 0 then
+        task.spawn(function()
+            task.wait(5)
+            if LocalPlayer.Character == char and spinSpeed and spinSpeed ~= 0 then
+                startGlitchedFlyForCharacter(char)
+            end
+        end)
+    end
+end)
+
+if game.BindToClose then
+    game:BindToClose(function()
+        stopGlitchedFly()
+    end)
+end
