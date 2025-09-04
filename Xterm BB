@@ -68,6 +68,51 @@ local AutoBuyCheckbox = MainTab:CreateToggle({
         end
     end,
 })
+local autoBuyRagdoll = false
+local autoBuyRagdollTask = nil
+local lastRagdollCount = nil
+local refinedThisRagdoll = false
+
+local function safeFire(remoteName, ...)
+    pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild(remoteName):FireServer(...)
+    end)
+end
+
+local function getRagdollIndex()
+    local folder = game:GetService("ReplicatedStorage"):FindFirstChild("Ragdolls") or workspace:FindFirstChild("Ragdolls")
+    if not folder then return nil end
+    return #folder:GetChildren()
+end
+
+local AutoBuyRagdollToggle = MainTab:CreateToggle({
+    Name = "Auto Buy Next Ragdoll (with single refine)",
+    CurrentValue = false,
+    Flag = "AutoBuyNextRagdollRefine",
+    Callback = function(state)
+        autoBuyRagdoll = state
+        if autoBuyRagdoll then
+            lastRagdollCount = getRagdollIndex()
+            refinedThisRagdoll = false
+            if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
+            autoBuyRagdollTask = task.spawn(function()
+                while autoBuyRagdoll do
+                    safeFire("PurchaseNextRagdoll")
+                    local current = getRagdollIndex()
+                    if current and lastRagdollCount and current > lastRagdollCount then
+                        if not refinedThisRagdoll then
+                            safeFire("RefineRagdoll")
+                            refinedThisRagdoll = true
+                        end
+                        lastRagdollCount = current
+                    end
+                end
+            end)
+        else
+            if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
+        end
+    end,
+})
 
 local Button = MainTab:CreateButton({
    Name = "Buy All Body Parts One Time",
