@@ -80,7 +80,7 @@ game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Purch
 })
 
 local Button = MainTab:CreateButton({
-   Name = "BuyTorso",
+   Name = "Buy Torso",
    Callback = function()
    local args = {
 	"Torso"
