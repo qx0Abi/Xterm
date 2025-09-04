@@ -56,56 +56,42 @@ local Button = MainTab:CreateButton({
 local Button = MainTab:CreateButton({
    Name = "PurchaseNextRagdoll",
    Callback = function()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
    end,
 })
 
 local Button = MainTab:CreateButton({
    Name = "RefineRagdoll",
    Callback = function()
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
-
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
    end,
 })
 
 local Button = MainTab:CreateButton({
    Name = "Buy Head",
    Callback = function()
-   local args = {
-	"Head"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
    end,
 })
 
 local Button = MainTab:CreateButton({
    Name = "Buy Torso",
    Callback = function()
-   local args = {
-	"Torso"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
    end,
 })
 
 local Button = MainTab:CreateButton({
    Name = "Buy Leg",
    Callback = function()
-   local args = {
-	"Leg"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
    end,
 })
 
 local Button = MainTab:CreateButton({
    Name = "Buy Arm",
    Callback = function()
-   local args = {
-	"Arm"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
    end,
 })
 
@@ -230,7 +216,7 @@ local SpinInput = MainTab:CreateInput({
    Callback = function(Text)
        local val = tonumber(Text) or 0
        inputValue = val
-       spinSpeed = inputValue -- kein *10 mehr; direktes Mapping
+       spinSpeed = inputValue 
        if spinSpeed ~= 0 then
            local pl = LocalPlayer
            local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
@@ -238,31 +224,3 @@ local SpinInput = MainTab:CreateInput({
                startGlitchedFlyForCharacter(char)
            end
        else
-           stopGlitchedFly()
-       end
-   end,
-})
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.08)
-    if currentHRP then
-        clearPhysicsExtras(currentHRP)
-    end
-    currentHRP = nil
-    if spinSpeed and spinSpeed ~= 0 then
-        -- Warte 5 Sekunden nach Respawn bevor Glitched Fly gestartet wird
-        task.spawn(function()
-            task.wait(5)
-            -- Stelle sicher, dass der Charakter noch derselbe ist und spinSpeed noch aktiv ist
-            if LocalPlayer.Character == char and spinSpeed and spinSpeed ~= 0 then
-                startGlitchedFlyForCharacter(char)
-            end
-        end)
-    end
-end)
-
-if game.BindToClose then
-    game:BindToClose(function()
-        stopGlitchedFly()
-    end)
-end
