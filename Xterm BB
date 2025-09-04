@@ -41,9 +41,35 @@ Rayfield:Notify({
    Duration = 2,
    Image = nil,
 })
+local autoBuy = false
+local autoBuyTask = nil
+
+local AutoBuyCheckbox = MainTab:CreateToggle({
+    Name = "Auto Buy Body Parts",
+    CurrentValue = false,
+    Flag = "AutoBuyBodyParts",
+    Callback = function(state)
+        autoBuy = state
+        if autoBuy then
+            if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
+            autoBuyTask = task.spawn(function()
+                while autoBuy do
+                    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+                        pcall(function()
+                            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+                        end)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
+        end
+    end,
+})
 
 local Button = MainTab:CreateButton({
-   Name = "Buy All Body Parts",
+   Name = "Buy All Body Parts One Time",
    Callback = function()
        for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
            pcall(function()
