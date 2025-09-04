@@ -69,6 +69,31 @@ local AutoBuyCheckbox = MainTab:CreateToggle({
     end,
 })
 
+local autoBuyRagdoll = false
+local autoBuyRagdollTask = nil
+
+local AutoBuyRagdollCheckbox = MainTab:CreateToggle({
+    Name = "Auto Buy Next Ragdoll",
+    CurrentValue = false,
+    Flag = "AutoBuyNextRagdoll",
+    Callback = function(state)
+        autoBuyRagdoll = state
+        if autoBuyRagdoll then
+            if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
+            autoBuyRagdollTask = task.spawn(function()
+                while autoBuyRagdoll do
+                    pcall(function()
+                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+                    end)
+                    task.wait(0.5) -- gleiche Wartezeit wie bei Auto Buy Body Parts
+                end
+            end)
+        else
+            if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
+        end
+    end,
+})
+
 local Button = MainTab:CreateButton({
    Name = "Buy All Body Parts One Time",
    Callback = function()
