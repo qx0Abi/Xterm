@@ -42,6 +42,73 @@ Rayfield:Notify({
    Image = nil,
 })
 
+local Button = MainTab:CreateButton({
+   Name = "Buy All Body Parts",
+   Callback = function()
+       for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+           pcall(function()
+               game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+           end)
+       end
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "PurchaseNextRagdoll",
+   Callback = function()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "RefineRagdoll",
+   Callback = function()
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
+
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "Buy Head",
+   Callback = function()
+   local args = {
+	"Head"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "BuyTorso",
+   Callback = function()
+   local args = {
+	"Torso"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "Buy Leg",
+   Callback = function()
+   local args = {
+	"Leg"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+   end,
+})
+
+local Button = MainTab:CreateButton({
+   Name = "Buy Arm",
+   Callback = function()
+   local args = {
+	"Arm"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(unpack(args))
+   end,
+})
+
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
