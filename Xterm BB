@@ -236,7 +236,7 @@ local selectedRagdoll = Ragdolls[1] -- Standardwahl
 
 local DropdownRagdoll = Tab1:AddDropdown({
     Name = "Ragdoll auswählen",
-    Description = "Wähle ein Ragdoll-Model zum equippen",
+    Description = "Select a Ragedoll to Equip",
     Options = Ragdolls,
     Default = selectedRagdoll,
     Callback = function(val)
