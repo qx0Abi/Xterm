@@ -1,3 +1,4 @@
+
 local success, redzlib = pcall(function()
     return loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
 end)
@@ -18,7 +19,7 @@ local Window = redzlib:MakeWindow({
 -- optional: minimize button (icon from your example)
 pcall(function()
     Window:AddMinimizeButton({
-        Button = { Image = "rbxassetid://1243374081", BackgroundTransparency = 0 },
+        Button = { Image = "bone", BackgroundTransparency = 0 },
         Corner = { CornerRadius = UDim.new(35, 1) },
     })
 end)
@@ -36,7 +37,7 @@ local Section = Tab1:AddSection({"Main"})
 
 Window:Dialog({
     Title = "Xterm Break Your Bones",
-    Text = "is Loading",
+    Text = "is Loaded",
     Options = {
         {"OK", function() end}
     }
@@ -202,6 +203,39 @@ ToggleAutoBuyRagdoll:Callback(function(state)
         if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
     end
 end)
+
+-- Ragdoll-Auswahl + Equip-Button (einfügen nach deinen Tab1 Buttons)
+local Ragdolls = {
+    "Noodle","Mutant","Default","Worm","Star","Tadpole","Walker","Goofy","Wobbler","Doubles",
+    "General","Spider","Chunk","Tower","Snake","Squid","Sergeant","Wall","Golem","Centaur",
+    "Triplet","Slender","Tentacles","Centipede","Octagon","Hydra","Lanky"
+}
+
+local selectedRagdoll = Ragdolls[1] -- Standardwahl
+
+local DropdownRagdoll = Tab1:AddDropdown({
+    Name = "Ragdoll auswählen",
+    Description = "Wähle ein Ragdoll-Model zum equippen",
+    Options = Ragdolls,
+    Default = selectedRagdoll,
+    Callback = function(val)
+        selectedRagdoll = val
+    end
+})
+
+Tab1:AddButton({"Equip Selected Ragdoll", function()
+    if not selectedRagdoll or selectedRagdoll == "" then
+        return
+    end
+    pcall(function()
+        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
+        if remotes and remotes:FindFirstChild("EquipRagdoll") then
+            remotes:WaitForChild("EquipRagdoll"):FireServer(selectedRagdoll)
+        else
+            warn("EquipRagdoll remote not found")
+        end
+    end)
+end})
 
 Tab1:AddButton({"Buy All Body Parts One Time", function()
     for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
