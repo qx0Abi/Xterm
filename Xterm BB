@@ -235,7 +235,7 @@ local Ragdolls = {
 local selectedRagdoll = Ragdolls[1] -- Standardwahl
 
 local DropdownRagdoll = Tab1:AddDropdown({
-    Name = "Ragdoll auswählen",
+    Name = "Select Ragdoll",
     Description = "Select a Ragedoll to Equip",
     Options = Ragdolls,
     Default = selectedRagdoll,
