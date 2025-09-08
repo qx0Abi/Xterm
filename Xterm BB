@@ -1,155 +1,57 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local success, redzlib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
+end)
 
-local Window = Rayfield:CreateWindow({
-   Name = "Xterm Break Bones",
-   Icon = 0,
-   LoadingTitle = "Xterm BB",
-   LoadingSubtitle = "by qx0_",
-   ShowText = "Xterm BB",
-   Theme = "Default",
-   ToggleUIKeybind = "K",
-   DisableRayfieldPrompts = false,
-   DisableBuildWarnings = false,
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = nil,
-      FileName = "Xterm"
-   },
-   Discord = {
-      Enabled = false,
-      Invite = "noinvitelink",
-      RememberJoins = true
-   },
-   KeySystem = false,
-   KeySettings = {
-      Title = "Untitled",
-      Subtitle = "Key System",
-      Note = "No method of obtaining the key is provided",
-      FileName = "Key",
-      SaveKey = true,
-      GrabKeyFromSite = false,
-      Key = {"Hello"}
-   }
+if not success or not redzlib then
+    warn("Failed to load redzlib:", redzlib)
+    return
+end
+
+print("redzlib loaded:", typeof(redzlib))
+
+local Window = redzlib:MakeWindow({
+    Title = "Xterm Break Bones",
+    SubTitle = "by qx0_",
+    SaveFolder = "Xterm_redzlib_config"
 })
 
-local MainTab = Window:CreateTab("🦴🔨Bone Breaker", nil)
-local MainSection = MainTab:CreateSection("Main")
+-- optional: minimize button (icon from your example)
+pcall(function()
+    Window:AddMinimizeButton({
+        Button = { Image = "rbxassetid://1243374081", BackgroundTransparency = 0 },
+        Corner = { CornerRadius = UDim.new(35, 1) },
+    })
+end)
 
-Rayfield:Notify({
-   Title = "Xterm Break Your Bones",
-   Content = "is Loading",
-   Duration = 2,
-   Image = nil,
+-- Protect SetTheme (some versions may not have it or expect different args)
+pcall(function()
+    if redzlib.SetTheme then
+        redzlib:SetTheme("Dark")
+    end
+end)
+
+-- Create tab and section
+local Tab1 = Window:MakeTab({"🦴🔨Bone Breaker", "bone"})
+local Section = Tab1:AddSection({"Main"})
+
+Window:Dialog({
+    Title = "Xterm Break Your Bones",
+    Text = "is Loading",
+    Options = {
+        {"OK", function() end}
+    }
 })
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local autoBuy = false
 local autoBuyTask = nil
 
-local AutoBuyCheckbox = MainTab:CreateToggle({
-    Name = "Auto Buy Body Parts",
-    CurrentValue = false,
-    Flag = "AutoBuyBodyParts",
-    Callback = function(state)
-        autoBuy = state
-        if autoBuy then
-            if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
-            autoBuyTask = task.spawn(function()
-                while autoBuy do
-                    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
-                        pcall(function()
-                            game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
-                        end)
-                    end
-                    task.wait(0.5)
-                end
-            end)
-        else
-            if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
-        end
-    end,
-})
-
 local autoBuyRagdoll = false
 local autoBuyRagdollTask = nil
-
-local AutoBuyRagdollCheckbox = MainTab:CreateToggle({
-    Name = "Auto Buy Next Ragdoll",
-    CurrentValue = false,
-    Flag = "AutoBuyNextRagdoll",
-    Callback = function(state)
-        autoBuyRagdoll = state
-        if autoBuyRagdoll then
-            if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
-            autoBuyRagdollTask = task.spawn(function()
-                while autoBuyRagdoll do
-                    pcall(function()
-                        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-                    end)
-                    task.wait(0.5) -- gleiche Wartezeit wie bei Auto Buy Body Parts
-                end
-            end)
-        else
-            if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
-        end
-    end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "Buy All Body Parts One Time",
-   Callback = function()
-       for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
-           pcall(function()
-               game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
-           end)
-       end
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "PurchaseNextRagdoll",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "RefineRagdoll",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "Buy Head",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "Buy Torso",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "Buy Leg",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
-   end,
-})
-
-local Button = MainTab:CreateButton({
-   Name = "Buy Arm",
-   Callback = function()
-       game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
-   end,
-})
-
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 
 local SPIN_MULTIPLIER = 40
 local IMPULSE_INTERVAL = 0.1
@@ -172,7 +74,7 @@ local function clearPhysicsExtras(hrp)
     if not hrp then return end
     for _, c in ipairs(hrp:GetChildren()) do
         if c.Name == "__SPIN_ANGVEL__" or c.Name == "__SPIN_BODYVELOCITY__" then
-            c:Destroy()
+            pcall(function() c:Destroy() end)
         end
     end
 end
@@ -236,7 +138,7 @@ local function startGlitchedFlyForCharacter(char)
     stopGlitchedFly()
     currentHRP = getHRP(char)
     if not currentHRP then
-        currentHRP = char:WaitForChild("HumanoidRootPart", 2) or getHRP(char)
+        currentHRP = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 2) or getHRP(char)
     end
     if not currentHRP then return end
     glitchedFlying = true
@@ -255,27 +157,117 @@ local function startGlitchedFlyForCharacter(char)
     end
 end
 
-local SpinInput = MainTab:CreateInput({
-   Name = "Auto Farm(Break Your bones)",
-   CurrentValue = "0",
-   PlaceholderText = "Enter Number",
-   RemoveTextAfterFocusLost = false,
-   Flag = "SpinInput",
-   Callback = function(Text)
-       local val = tonumber(Text) or 0
-       inputValue = val
-       spinSpeed = inputValue
-       if spinSpeed ~= 0 then
-           local pl = LocalPlayer
-           local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
-           if char then
-               startGlitchedFlyForCharacter(char)
-           end
-       else
-           stopGlitchedFly()
-       end
-   end,
+local ToggleAutoBuy = Tab1:AddToggle({
+    Name = "Auto Buy Body Parts",
+    Description = "Automatically purchases body parts",
+    Default = false
 })
+ToggleAutoBuy:Callback(function(state)
+    autoBuy = state
+    if autoBuy then
+        if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
+        autoBuyTask = task.spawn(function()
+            while autoBuy do
+                for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+                    pcall(function()
+                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+                    end)
+                end
+                task.wait(0.5)
+            end
+        end)
+    else
+        if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
+    end
+end)
+
+local ToggleAutoBuyRagdoll = Tab1:AddToggle({
+    Name = "Auto Buy Next Ragdoll",
+    Description = "Automatically purchases next ragdoll",
+    Default = false
+})
+ToggleAutoBuyRagdoll:Callback(function(state)
+    autoBuyRagdoll = state
+    if autoBuyRagdoll then
+        if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
+        autoBuyRagdollTask = task.spawn(function()
+            while autoBuyRagdoll do
+                pcall(function()
+                    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+                end)
+                task.wait(0.5)
+            end
+        end)
+    else
+        if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
+    end
+end)
+
+Tab1:AddButton({"Buy All Body Parts One Time", function()
+    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+        end)
+    end
+end})
+
+Tab1:AddButton({"PurchaseNextRagdoll", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+    end)
+end})
+
+Tab1:AddButton({"RefineRagdoll", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
+    end)
+end})
+
+Tab1:AddButton({"Buy Head", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
+    end)
+end})
+
+Tab1:AddButton({"Buy Torso", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
+    end)
+end})
+
+Tab1:AddButton({"Buy Leg", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
+    end)
+end})
+
+Tab1:AddButton({"Buy Arm", function()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
+    end)
+end})
+
+local SpinSlider = Tab1:AddSlider({
+    Name = "Auto Farm (Break Your bones)",
+    Min = 0,
+    Max = 88888,
+    Increase = 1,
+    Default = 0
+})
+SpinSlider:Callback(function(val)
+    local valnum = tonumber(val) or 0
+    inputValue = valnum
+    spinSpeed = inputValue
+    if spinSpeed ~= 0 then
+        local pl = LocalPlayer
+        local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
+        if char then
+            startGlitchedFlyForCharacter(char)
+        end
+    else
+        stopGlitchedFly()
+    end
+end)
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.08)
@@ -293,8 +285,11 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+-- Sicherer BindToClose-Aufruf: pcall verhindert Client-Fehler
 if game.BindToClose then
-    game:BindToClose(function()
-        stopGlitchedFly()
+    pcall(function()
+        game:BindToClose(function()
+            stopGlitchedFly()
+        end)
     end)
 end
