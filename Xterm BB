@@ -7,15 +7,12 @@ if not success or not redzlib then
     return
 end
 
-print("redzlib loaded:", typeof(redzlib))
-
 local Window = redzlib:MakeWindow({
-    Title = "Xterm Break Bones",
+    Title = "Xterm Break Bones v2",
     SubTitle = "by qx0_",
     SaveFolder = "Xterm_redzlib_config"
 })
 
--- optional: minimize button (icon from your example)
 pcall(function()
     Window:AddMinimizeButton({
         Button = { Image = "bone", BackgroundTransparency = 0 },
@@ -23,14 +20,12 @@ pcall(function()
     })
 end)
 
--- Protect SetTheme (some versions may not have it or expect different args)
 pcall(function()
     if redzlib.SetTheme then
         redzlib:SetTheme("Dark")
     end
 end)
 
--- Create tab and section
 local Tab1 = Window:MakeTab({"🦴🔨Bone Breaker", "bone"})
 local Section = Tab1:AddSection({"Main"})
 
@@ -43,9 +38,10 @@ Window:Dialog({
 })
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
 
 local autoBuy = false
 local autoBuyTask = nil
@@ -157,8 +153,169 @@ local function startGlitchedFlyForCharacter(char)
     end
 end
 
+local isActive = false
+local damageObjects = {}
+local damageConnection = nil
+
+local invisibleSpawned = true
+local spawnCount = 20
+
+local STRONG = {
+    MIN_SPEED = 180,
+    MAX_SPEED = 420,
+    BOOST_MIN = 500,
+    BOOST_MAX = 900,
+    BOOST_CHANCE = 3,
+    BODY_MAXFORCE = 1e6,
+}
+
+local function setPartVisibility(part, invisible)
+    if not part then return end
+    if invisible then
+        part.Transparency = 1
+        part.CastShadow = false
+    else
+        part.Transparency = 0
+        part.CastShadow = true
+    end
+end
+
+local function createDamageObjects()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local playerPosition = character.HumanoidRootPart.Position
+
+    for i = 1, spawnCount do
+        local part = Instance.new("Part")
+        part.Name = "DamageObject_" .. i
+        part.Size = Vector3.new(
+            math.random(3, 10),
+            math.random(3, 10),
+            math.random(3, 10)
+        )
+        part.Material = Enum.Material.Concrete
+        part.BrickColor = BrickColor.new("Really black")
+        part.CanCollide = true
+        part.Anchored = false
+        part.CFrame = CFrame.new(playerPosition + Vector3.new(
+            math.random(-18, 18),
+            math.random(0, 8),
+            math.random(-18, 18)
+        ))
+        part.Parent = workspace
+
+        setPartVisibility(part, true)
+
+        local bodyVel = Instance.new("BodyVelocity")
+        bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
+        bodyVel.Velocity = Vector3.new(0, 0, 0)
+        bodyVel.Parent = part
+
+        table.insert(damageObjects, {part = part, bodyVel = bodyVel})
+    end
+end
+
+local function updateAllPartVisibility(invisible)
+    for _, objData in pairs(damageObjects) do
+        if objData and objData.part and objData.part.Parent then
+            setPartVisibility(objData.part, true)
+        end
+    end
+end
+
+local function moveDamageObjects()
+    local character = LocalPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local playerPosition = character.HumanoidRootPart.Position
+
+    for _, objData in pairs(damageObjects) do
+        if objData and objData.part and objData.part.Parent and objData.bodyVel then
+            local part = objData.part
+            local bodyVel = objData.bodyVel
+
+            local time = tick() * 4
+            local radius = math.random(6, 20)
+            local angle = time + (part.Name:byte() * 0.2)
+
+            local targetPos = playerPosition + Vector3.new(
+                math.cos(angle) * radius,
+                math.sin(time * 2) * 12,
+                math.sin(angle) * radius
+            )
+
+            local dir = (targetPos - part.Position)
+            if dir.Magnitude > 0.1 then
+                local baseSpeed = math.random(STRONG.MIN_SPEED, STRONG.MAX_SPEED)
+                bodyVel.Velocity = dir.Unit * baseSpeed
+            else
+                bodyVel.Velocity = Vector3.new(0, 0, 0)
+            end
+
+            if math.random(1, STRONG.BOOST_CHANCE) == 1 then
+                local boostDir = (playerPosition - part.Position).Unit
+                local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
+                bodyVel.Velocity = boostDir * boostSpeed
+
+                local origMax = bodyVel.MaxForce
+                bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
+                delay(0.15, function()
+                    if bodyVel and bodyVel.Parent then
+                        bodyVel.MaxForce = origMax
+                    end
+                end)
+            end
+
+            part.CFrame = part.CFrame * CFrame.Angles(
+                math.rad(math.random(-40, 40)),
+                math.rad(math.random(-40, 40)),
+                math.rad(math.random(-40, 40))
+            )
+        end
+    end
+end
+
+local function cleanupDamageObjects()
+    for _, objData in pairs(damageObjects) do
+        if objData and objData.part and objData.part.Parent then
+            objData.part:Destroy()
+        end
+    end
+    damageObjects = {}
+end
+
+local function breakBones()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.WalkSpeed = math.max(2, humanoid.WalkSpeed * 0.3)
+        humanoid.JumpPower = math.max(5, humanoid.JumpPower * 0.2)
+    end
+end
+
+local function ensureDamageLoop()
+    if damageConnection and damageConnection.Connected then return end
+    damageConnection = RunService.Heartbeat:Connect(function()
+        if isActive then
+            moveDamageObjects()
+            if math.random(1, 120) == 1 then
+                breakBones()
+            end
+        end
+    end)
+end
+
+local function characterCleanup()
+    if damageConnection then
+        damageConnection:Disconnect()
+        damageConnection = nil
+    end
+    cleanupDamageObjects()
+end
+
 local SpinSlider = Tab1:AddSlider({
-    Name = "Auto Farm (Break Your bones)",
+    Name = "Auto Farm V1 ",
+    Description = "Little slower but discreet",
     Min = 0,
     Max = 88888,
     Increase = 1,
@@ -177,6 +334,41 @@ SpinSlider:Callback(function(val)
     else
         stopGlitchedFly()
     end
+end)
+
+local ToggleDamage = Tab1:AddToggle({
+    Name = "Auto Fam v2",
+    Description = "Better but more Risky",
+    Default = false
+})
+ToggleDamage:Callback(function(state)
+    isActive = state
+    if isActive then
+        if #damageObjects == 0 then
+            createDamageObjects()
+        else
+            updateAllPartVisibility(true)
+        end
+        ensureDamageLoop()
+    else
+        if damageConnection then
+            damageConnection:Disconnect()
+            damageConnection = nil
+        end
+        cleanupDamageObjects()
+    end
+end)
+
+local SpawnCountSlider = Tab1:AddSlider({
+    Name = "Strength Auto Farm v2",
+    Min = 1,
+    Max = 60,
+    Increase = 1,
+    Default = spawnCount
+})
+SpawnCountSlider:Callback(function(val)
+    local n = tonumber(val) or spawnCount
+    spawnCount = math.clamp(math.floor(n), 1, 60)
 end)
 
 local ToggleAutoBuy = Tab1:AddToggle({
@@ -225,14 +417,13 @@ ToggleAutoBuyRagdoll:Callback(function(state)
     end
 end)
 
--- Ragdoll-Auswahl + Equip-Button (einfügen nach deinen Tab1 Buttons)
 local Ragdolls = {
     "Noodle","Mutant","Default","Worm","Star","Tadpole","Walker","Goofy","Wobbler","Doubles",
     "General","Spider","Chunk","Tower","Snake","Squid","Sergeant","Wall","Golem","Centaur",
     "Triplet","Slender","Tentacles","Centipede","Octagon","Hydra","Lanky"
 }
 
-local selectedRagdoll = Ragdolls[1] -- Standardwahl
+local selectedRagdoll = Ragdolls[1]
 
 local DropdownRagdoll = Tab1:AddDropdown({
     Name = "Select Ragdoll",
@@ -316,13 +507,37 @@ LocalPlayer.CharacterAdded:Connect(function(char)
             end
         end)
     end
+
+    local desired = isActive
+    if damageConnection then
+        damageConnection:Disconnect()
+        damageConnection = nil
+    end
+    cleanupDamageObjects()
+    if desired then
+        task.spawn(function()
+            task.wait(10)
+            if LocalPlayer.Character == char then
+                if #damageObjects == 0 then
+                    createDamageObjects()
+                else
+                    updateAllPartVisibility(true)
+                end
+                ensureDamageLoop()
+            end
+        end)
+    end
 end)
 
--- Sicherer BindToClose-Aufruf: pcall verhindert Client-Fehler
 if game.BindToClose then
     pcall(function()
         game:BindToClose(function()
             stopGlitchedFly()
+            if damageConnection then
+                damageConnection:Disconnect()
+                damageConnection = nil
+            end
+            cleanupDamageObjects()
         end)
     end)
 end
