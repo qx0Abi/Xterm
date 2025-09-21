@@ -504,7 +504,7 @@ local selectedRagdoll = detected or Ragdolls[1]
 
 local DropdownRagdoll = Tab1:AddDropdown({
     Name = "Select Ragdoll",
-    Description = "Auto-detect enabled",
+    Description = "Shows all Ragdolls",
     Options = Ragdolls,
     Default = selectedRagdoll,
     Callback = function(val) selectedRagdoll = val end
