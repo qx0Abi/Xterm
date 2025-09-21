@@ -417,32 +417,155 @@ ToggleAutoBuyRagdoll:Callback(function(state)
     end
 end)
 
-local Ragdolls = {
-    "Noodle","Mutant","Default","Worm","Star","Tadpole","Walker","Goofy","Wobbler","Doubles",
-    "General","Spider","Chunk","Tower","Snake","Squid","Sergeant","Wall","Golem","Centaur",
-    "Triplet","Slender","Tentacles","Centipede","Octagon","Hydra","Lanky"
-}
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
 
-local selectedRagdoll = Ragdolls[1]
+local Ragdolls = {}
+
+local function contains(t, v)
+    for _, x in ipairs(t) do if x == v then return true end end
+    return false
+end
+
+local function addRagdoll(name)
+    if not name or name == "" then return false end
+    for _, v in ipairs(Ragdolls) do if v == name then return false end end
+    table.insert(Ragdolls, name)
+    return true
+end
+
+local function detectCurrentRagdoll()
+    local a = player:GetAttribute("Ragdoll")
+    if a and a ~= "" then return tostring(a) end
+
+    if player.Character then
+        a = player.Character:GetAttribute("Ragdoll")
+        if a and a ~= "" then return tostring(a) end
+    end
+
+    for _, cont in ipairs({player, player.Character}) do
+        if cont then
+            for _, obj in ipairs(cont:GetChildren()) do
+                if obj:IsA("StringValue") then
+                    local n = obj.Name:lower()
+                    if n:find("ragdoll") and obj.Value and obj.Value ~= "" then
+                        return tostring(obj.Value)
+                    end
+                end
+            end
+        end
+    end
+
+    local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
+    if folder then
+        for _, child in ipairs(folder:GetChildren()) do
+            if child.Name and child.Name ~= "" then
+                addRagdoll(child.Name)
+                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
+                    return child.Name
+                end
+            end
+        end
+    end
+
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if remotes then
+        local cur = remotes:FindFirstChild("CurrentRagdoll") or remotes:FindFirstChild("GetCurrentRagdoll")
+        if cur then
+            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
+                return tostring(cur.Value)
+            elseif cur:IsA("RemoteFunction") then
+                local ok, res = pcall(function() return cur:InvokeServer() end)
+                if ok and res and res ~= "" then return tostring(res) end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function initialFill()
+    local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
+    if folder then
+        for _, c in ipairs(folder:GetChildren()) do
+            if c.Name and c.Name ~= "" then addRagdoll(c.Name) end
+        end
+    end
+    local defaults = {"Default","Noodle","Mutant"}
+    for _, d in ipairs(defaults) do addRagdoll(d) end
+end
+
+initialFill()
+local detected = detectCurrentRagdoll()
+if detected then addRagdoll(detected) end
+
+local selectedRagdoll = detected or Ragdolls[1]
 
 local DropdownRagdoll = Tab1:AddDropdown({
     Name = "Select Ragdoll",
-    Description = "Select a Ragedoll to Equip",
+    Description = "Auto-detect enabled",
     Options = Ragdolls,
     Default = selectedRagdoll,
-    Callback = function(val)
-        selectedRagdoll = val
-    end
+    Callback = function(val) selectedRagdoll = val end
 })
 
-Tab1:AddButton({"Equip Selected Ragdoll", function()
-    if not selectedRagdoll or selectedRagdoll == "" then
-        return
+local function refreshDropdown()
+    if DropdownRagdoll.SetOptions then
+        DropdownRagdoll:SetOptions(Ragdolls)
+    elseif DropdownRagdoll.UpdateOptions then
+        DropdownRagdoll:UpdateOptions(Ragdolls)
+    else
+        if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(selectedRagdoll or Ragdolls[1]) end
     end
+end
+
+player:GetAttributeChangedSignal("Ragdoll"):Connect(function()
+    local v = player:GetAttribute("Ragdoll")
+    if v and addRagdoll(v) then refreshDropdown() end
+    if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
+end)
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.05)
+    for _, obj in ipairs(char:GetChildren()) do
+        if obj:IsA("StringValue") and obj.Name:lower():find("ragdoll") and obj.Value and obj.Value ~= "" then
+            if addRagdoll(obj.Value) then refreshDropdown() end
+            selectedRagdoll = obj.Value
+            if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(obj.Value) end
+            break
+        end
+    end
+    if char.GetAttributeChangedSignal then
+        char:GetAttributeChangedSignal("Ragdoll"):Connect(function()
+            local v = char:GetAttribute("Ragdoll")
+            if v and addRagdoll(v) then refreshDropdown() end
+            if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(3)
+        local found = false
+        local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
+        if folder then
+            for _, child in ipairs(folder:GetChildren()) do
+                if child.Name and addRagdoll(child.Name) then found = true end
+            end
+        end
+        if found then refreshDropdown() end
+    end
+end)
+
+Tab1:AddButton({"Equip Selected Ragdoll", function()
+    local toEquip = selectedRagdoll or Ragdolls[1]
+    if not toEquip or toEquip == "" then return end
     pcall(function()
         local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
         if remotes and remotes:FindFirstChild("EquipRagdoll") then
-            remotes:WaitForChild("EquipRagdoll"):FireServer(selectedRagdoll)
+            remotes:WaitForChild("EquipRagdoll"):FireServer(toEquip)
         else
             warn("EquipRagdoll remote not found")
         end
