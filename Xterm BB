@@ -26,8 +26,11 @@ pcall(function()
     end
 end)
 
-local Tab1 = Window:MakeTab({"🦴🔨Bone Breaker", "bone"})
-local Section = Tab1:AddSection({"Main"})
+local Tab1 = Window:MakeTab({"Auto Farm", "bone"})
+local Section = Tab1:AddSection({"🦴🔨Bone Breaker🔨🦴"})
+
+local Tab2 = Window:MakeTab({"Shop"})
+local Section = Tab2:AddSection({"🛍️Shopping🛍️"})
 
 Window:Dialog({
     Title = "Xterm Break Your Bones",
@@ -376,7 +379,7 @@ SpawnCountSlider:Callback(function(val)
     spawnCount = math.clamp(math.floor(n), 1, 60)
 end)
 
-local ToggleAutoBuy = Tab1:AddToggle({
+local ToggleAutoBuy = Tab2:AddToggle({
     Name = "Auto Buy Body Parts",
     Description = "Automatically purchases body parts",
     Default = false
@@ -400,7 +403,7 @@ ToggleAutoBuy:Callback(function(state)
     end
 end)
 
-local ToggleAutoBuyRagdoll = Tab1:AddToggle({
+local ToggleAutoBuyRagdoll = Tab2:AddToggle({
     Name = "Auto Buy Next Ragdoll",
     Description = "Automatically purchases next ragdoll",
     Default = false
@@ -507,7 +510,7 @@ if detected then addRagdoll(detected) end
 
 local selectedRagdoll = detected or Ragdolls[1]
 
-local DropdownRagdoll = Tab1:AddDropdown({
+local DropdownRagdoll = Tab2:AddDropdown({
     Name = "Select Ragdoll",
     Description = "Shows all Ragdolls",
     Options = Ragdolls,
@@ -564,7 +567,7 @@ task.spawn(function()
     end
 end)
 
-Tab1:AddButton({"Equip Selected Ragdoll", function()
+Tab2:AddButton({"Equip Selected Ragdoll", function()
     local toEquip = selectedRagdoll or Ragdolls[1]
     if not toEquip or toEquip == "" then return end
     pcall(function()
@@ -577,7 +580,7 @@ Tab1:AddButton({"Equip Selected Ragdoll", function()
     end)
 end})
 
-Tab1:AddButton({"Buy All Body Parts One Time", function()
+Tab2:AddButton({"Buy All Body Parts One Time", function()
     for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
         pcall(function()
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
@@ -585,37 +588,37 @@ Tab1:AddButton({"Buy All Body Parts One Time", function()
     end
 end})
 
-Tab1:AddButton({"PurchaseNextRagdoll", function()
+Tab2:AddButton({"PurchaseNextRagdoll", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
     end)
 end})
 
-Tab1:AddButton({"RefineRagdoll", function()
+Tab2:AddButton({"RefineRagdoll", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
     end)
 end})
 
-Tab1:AddButton({"Buy Head", function()
+Tab2:AddButton({"Buy Head", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
     end)
 end})
 
-Tab1:AddButton({"Buy Torso", function()
+Tab2:AddButton({"Buy Torso", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
     end)
 end})
 
-Tab1:AddButton({"Buy Leg", function()
+Tab2:AddButton({"Buy Leg", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
     end)
 end})
 
-Tab1:AddButton({"Buy Arm", function()
+Tab2:AddButton({"Buy Arm", function()
     pcall(function()
         ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
     end)
