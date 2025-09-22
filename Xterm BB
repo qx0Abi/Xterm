@@ -251,19 +251,24 @@ local function moveDamageObjects()
                 bodyVel.Velocity = Vector3.new(0, 0, 0)
             end
 
-            if math.random(1, STRONG.BOOST_CHANCE) == 1 then
-                local boostDir = (playerPosition - part.Position).Unit
-                local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
-                bodyVel.Velocity = boostDir * boostSpeed
+if math.random(1, STRONG.BOOST_CHANCE) == 1 then
+    local boostDir = (playerPosition - part.Position)
+    boostDir = Vector3.new(boostDir.X, 0, boostDir.Z)
+    if boostDir.Magnitude == 0 then
+        boostDir = Vector3.new((math.random()-0.5), 0, (math.random()-0.5))
+    end
+    boostDir = boostDir.Unit
+    local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
+    bodyVel.Velocity = boostDir * boostSpeed
 
-                local origMax = bodyVel.MaxForce
-                bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
-                delay(0.15, function()
-                    if bodyVel and bodyVel.Parent then
-                        bodyVel.MaxForce = origMax
-                    end
-                end)
-            end
+    local origMax = bodyVel.MaxForce
+    bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
+    delay(0.15, function()
+        if bodyVel and bodyVel.Parent then
+            bodyVel.MaxForce = origMax
+        end
+    end)
+end
 
             part.CFrame = part.CFrame * CFrame.Angles(
                 math.rad(math.random(-40, 40)),
