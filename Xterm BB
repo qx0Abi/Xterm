@@ -400,7 +400,7 @@ end
 
 Tab1:AddToggle({
     Name = "Heavy Boi",
-    Description = "Insanely High Gravity",
+    Description = "Insanely High Gravity (Auto Farm Bypass Toggle for Longer Auto Farm Runs)",
     Default = false,
     Callback = function(val)
         gravityOn = val
