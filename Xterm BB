@@ -691,6 +691,167 @@ Tab2:AddButton({"Equip Selected Ragdoll", function()
     end)
 end})
 
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+local Tab2 = Tab2
+
+local Materials = {}
+
+local function contains(t, v)
+    for _, x in ipairs(t) do if x == v then return true end end
+    return false
+end
+
+local function addMaterial(name)
+    if not name or name == "" then return false end
+    for _, v in ipairs(Materials) do if v == name then return false end end
+    table.insert(Materials, name)
+    return true
+end
+
+local function detectCurrentMaterial()
+    local a = player:GetAttribute("Material")
+    if a and a ~= "" then return tostring(a) end
+
+    if player.Character then
+        a = player.Character:GetAttribute("Material")
+        if a and a ~= "" then return tostring(a) end
+    end
+
+    for _, cont in ipairs({player, player.Character}) do
+        if cont then
+            for _, obj in ipairs(cont:GetChildren()) do
+                if obj:IsA("StringValue") then
+                    local n = obj.Name:lower()
+                    if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
+                        return tostring(obj.Value)
+                    end
+                end
+            end
+        end
+    end
+
+    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
+    if folder then
+        for _, child in ipairs(folder:GetChildren()) do
+            if child.Name and child.Name ~= "" then
+                addMaterial(child.Name)
+                -- optional: try match by character name (falls relevant)
+                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
+                    return child.Name
+                end
+            end
+        end
+    end
+
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    if remotes then
+        local cur = remotes:FindFirstChild("CurrentMaterial") or remotes:FindFirstChild("GetCurrentMaterial")
+        if cur then
+            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
+                return tostring(cur.Value)
+            elseif cur:IsA("RemoteFunction") then
+                local ok, res = pcall(function() return cur:InvokeServer() end)
+                if ok and res and res ~= "" then return tostring(res) end
+            end
+        end
+    end
+
+    return nil
+end
+
+local function initialFill()
+    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
+    if folder then
+        for _, c in ipairs(folder:GetChildren()) do
+            if c.Name and c.Name ~= "" then addMaterial(c.Name) end
+        end
+    end
+    local defaults = {"Default", "Spark", "Glass"}
+    for _, d in ipairs(defaults) do addMaterial(d) end
+end
+
+initialFill()
+local detected = detectCurrentMaterial()
+if detected then addMaterial(detected) end
+
+local selectedMaterial = detected or Materials[1]
+
+local DropdownMaterial = Tab2:AddDropdown({
+    Name = "Select Material",
+    Description = "Shows all Materials/Modifiers",
+    Options = Materials,
+    Default = selectedMaterial,
+    Callback = function(val) selectedMaterial = val end
+})
+
+local function refreshDropdown()
+    if DropdownMaterial.SetOptions then
+        DropdownMaterial:SetOptions(Materials)
+    elseif DropdownMaterial.UpdateOptions then
+        DropdownMaterial:UpdateOptions(Materials)
+    else
+        if DropdownMaterial.SetValue then DropdownMaterial:SetValue(selectedMaterial or Materials[1]) end
+    end
+end
+
+player:GetAttributeChangedSignal("Material"):Connect(function()
+    local v = player:GetAttribute("Material")
+    if v and addMaterial(v) then refreshDropdown() end
+    if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
+end)
+
+player.CharacterAdded:Connect(function(char)
+    task.wait(0.05)
+    for _, obj in ipairs(char:GetChildren()) do
+        if obj:IsA("StringValue") then
+            local n = obj.Name:lower()
+            if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
+                if addMaterial(obj.Value) then refreshDropdown() end
+                selectedMaterial = obj.Value
+                if DropdownMaterial.SetValue then DropdownMaterial:SetValue(obj.Value) end
+                break
+            end
+        end
+    end
+    if char.GetAttributeChangedSignal then
+        char:GetAttributeChangedSignal("Material"):Connect(function()
+            local v = char:GetAttribute("Material")
+            if v and addMaterial(v) then refreshDropdown() end
+            if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(3)
+        local found = false
+        local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
+        if folder then
+            for _, child in ipairs(folder:GetChildren()) do
+                if child.Name and addMaterial(child.Name) then found = true end
+            end
+        end
+        if found then refreshDropdown() end
+    end
+end)
+
+Tab2:AddButton({"Equip Selected Material", function()
+    local toEquip = selectedMaterial or Materials[1]
+    if not toEquip or toEquip == "" then return end
+    pcall(function()
+        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
+        if remotes and remotes:FindFirstChild("SelectModifier") then
+            remotes:WaitForChild("SelectModifier"):FireServer(toEquip)
+        else
+            warn("SelectModifier remote not found")
+        end
+    end)
+end})
+
 Tab2:AddButton({"Buy All Body Parts One Time", function()
     for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
         pcall(function()
