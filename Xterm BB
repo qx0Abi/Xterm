@@ -379,6 +379,35 @@ SpawnCountSlider:Callback(function(val)
     spawnCount = math.clamp(math.floor(n), 1, 100)
 end)
 
+local physService = game:GetService("Workspace")
+local defaultGravity = workspace.Gravity
+
+local gravityOn = false
+local desiredGravity = 100000
+
+local function setGravity(on)
+    local ok, err = pcall(function()
+        if on then
+            workspace.Gravity = desiredGravity
+        else
+            workspace.Gravity = defaultGravity or 196.2
+        end
+    end)
+    if not ok then
+        warn("Fehler beim Setzen der Gravität: "..tostring(err))
+    end
+end
+
+Tab1:AddToggle({
+    Name = "Heavy Boi",
+    Description = "Insanely High Gravity",
+    Default = false,
+    Callback = function(val)
+        gravityOn = val
+        setGravity(gravityOn)
+    end
+})
+
 local autoClaim = false
 local autoAccept = false
 
@@ -401,7 +430,7 @@ spawn(function()
         if autoClaim then
             fireRemote("ClaimQuest")
         end
-        wait(5)
+        wait(3)
     end
 end)
 
@@ -410,13 +439,12 @@ spawn(function()
         if autoAccept then
             fireRemote("StartQuest")
         end
-        wait(5)
+        wait(3)
     end
 end)
 
 Tab1:AddToggle({
   Name = "Auto Claim Quest",
-  Description = "Claim Quest every 5 sec",
   Default = false,
   Callback = function(v)
     autoClaim = v
@@ -425,7 +453,6 @@ Tab1:AddToggle({
 
 Tab1:AddToggle({
   Name = "Auto Accept Quest",
-  Description = "Accept Quest every 5 sec",
   Default = false,
   Callback = function(v)
     autoAccept = v
@@ -451,13 +478,12 @@ spawn(function()
         if autoMastery then
             fireMastery()
         end
-        wait(5)
+        wait(3)
     end
 end)
 
 Tab1:AddToggle({
   Name = "Auto Claim Mastery",
-  Description = "Auto Claim Quest Mastery every 5 sec",
   Default = false,
   Callback = function(v)
     autoMastery = v
