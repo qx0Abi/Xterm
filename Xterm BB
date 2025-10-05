@@ -14,10 +14,10 @@ local Window = redzlib:MakeWindow({
 })
 
 pcall(function()
-    Window:AddMinimizeButton({
-        Button = { Image = "bone", BackgroundTransparency = 0 },
-        Corner = { CornerRadius = UDim.new(35, 1) },
-    })
+Window:AddMinimizeButton({
+    Button = { Image = "rbxassetid://6023426926", BackgroundTransparency = 0 },
+    Corner = { CornerRadius = UDim.new(35, 1) },
+})
 end)
 
 pcall(function()
