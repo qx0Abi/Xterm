@@ -38,6 +38,9 @@ local damageObjects = {}
 local damageConnection = nil
 local spawnCount = 10
 
+local forceMovement = false
+local forceMovementLoop = nil
+
 local STRONG = {
     MIN_SPEED = 180,
     MAX_SPEED = 420,
@@ -210,6 +213,46 @@ local function setGravity(on)
     end
 end
 
+local function startForceMovement()
+    if forceMovementLoop then return end
+    
+    forceMovementLoop = RunService.Heartbeat:Connect(function()
+        if not forceMovement then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        pcall(function()
+            local humanoid = character:FindFirstChild("Humanoid")
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and hrp then
+                -- Force state to allow movement
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                humanoid.PlatformStand = false
+                
+                -- Apply move direction from joystick
+                local moveDir = humanoid.MoveDirection
+                if moveDir.Magnitude > 0 then
+                    local currentVel = hrp.AssemblyLinearVelocity
+                    hrp.AssemblyLinearVelocity = Vector3.new(
+                        moveDir.X * 16,
+                        currentVel.Y,
+                        moveDir.Z * 16
+                    )
+                end
+            end
+        end)
+    end)
+end
+
+local function stopForceMovement()
+    if forceMovementLoop then
+        forceMovementLoop:Disconnect()
+        forceMovementLoop = nil
+    end
+end
+
 local function fireRemote(remoteName)
     local success, err = pcall(function()
         local player = game:GetService("Players").LocalPlayer
@@ -306,6 +349,20 @@ AutoFarmTab:Toggle({
     Callback = function(val)
         gravityOn = val
         setGravity(gravityOn)
+    end
+})
+
+AutoFarmTab:Toggle({
+    Title = "Force Movement Control [BETA]",
+    Desc = "doesn’t work well with Autofarm but my still get you unstuck sometimes",
+    Default = false,
+    Callback = function(val)
+        forceMovement = val
+        if forceMovement then
+            startForceMovement()
+        else
+            stopForceMovement()
+        end
     end
 })
 
@@ -662,6 +719,14 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         damageConnection = nil
     end
     cleanupDamageObjects()
+    
+    -- Restart force movement if it was enabled
+    if forceMovement then
+        stopForceMovement()
+        task.wait(0.5)
+        startForceMovement()
+    end
+    
     if desired then
         task.spawn(function()
             task.wait(10)
@@ -685,6 +750,7 @@ if game.BindToClose then
                 damageConnection:Disconnect()
                 damageConnection = nil
             end
+            stopForceMovement()
             cleanupDamageObjects()
         end)
     end)
