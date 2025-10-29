@@ -345,13 +345,13 @@ local function toggle3DRendering(enabled)
         if not enabled then
             WindUI:Notify({
                 Title = "3D Rendering",
-                Content = "Deaktiviert - Nur UI sichtbar",
+                Content = "Disabled - Only UI visible",
                 Icon = "eye-off",
             })
         else
             WindUI:Notify({
                 Title = "3D Rendering",
-                Content = "Aktiviert",
+                Content = "Enabled",
                 Icon = "eye",
             })
         end
@@ -374,7 +374,7 @@ local function setLowQuality(enabled)
             
             WindUI:Notify({
                 Title = "Low Quality Mode",
-                Content = "Aktiviert - Maximale Performance",
+                Content = "Enabled - Maximum performance",
                 Icon = "zap",
             })
         else
@@ -389,7 +389,7 @@ local function setLowQuality(enabled)
             
             WindUI:Notify({
                 Title = "Low Quality Mode",
-                Content = "Deaktiviert",
+                Content = "Disabled",
                 Icon = "check",
             })
         end
@@ -427,7 +427,7 @@ local function enablePerformanceMode(enabled)
             
             WindUI:Notify({
                 Title = "Performance Mode",
-                Content = "Aktiviert - Alle Effekte deaktiviert",
+                Content = "Enabled - All effects disabled",
                 Icon = "zap",
             })
         else
@@ -454,7 +454,7 @@ local function enablePerformanceMode(enabled)
             
             WindUI:Notify({
                 Title = "Performance Mode",
-                Content = "Deaktiviert",
+                Content = "Disabled",
                 Icon = "check",
             })
         end
