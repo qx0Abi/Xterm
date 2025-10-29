@@ -1,167 +1,47 @@
-local success, redzlib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
-end)
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
-if not success or not redzlib then
-    warn("Failed to load redzlib:", redzlib)
-    return
-end
-
-local Window = redzlib:MakeWindow({
-    Title = "Xterm Break Bones v2",
-    SubTitle = "by qx0_",
-    SaveFolder = "Xterm_redzlib_config"
-})
-
-pcall(function()
-Window:AddMinimizeButton({
-    Button = { Image = "rbxassetid://6023426926", BackgroundTransparency = 0 },
-    Corner = { CornerRadius = UDim.new(35, 1) },
-})
-end)
-
-pcall(function()
-    if redzlib.SetTheme then
-        redzlib:SetTheme("Dark")
-    end
-end)
-
-local Tab1 = Window:MakeTab({"Auto Farm", "bone"})
-local Section = Tab1:AddSection({"🦴🔨Bone Breaker🔨🦴"})
-
-local Tab2 = Window:MakeTab({"Shop"})
-local Section = Tab2:AddSection({"🛍️Shopping🛍️"})
-
-Window:Dialog({
-    Title = "Xterm Break Your Bones",
-    Text = "is Loaded",
-    Options = {
-        {"OK", function() end}
+local Window = WindUI:CreateWindow({
+    Title = "Xterm Break Bones v3.0",
+    Icon = "skull",
+    Author = "by qx0_",
+    Folder = "Xterm_WindUI",
+    
+    OpenButton = {
+        Title = "Xterm 3.0",
+        Icon = "bone",
+        CornerRadius = UDim.new(0, 16),
+        StrokeThickness = 2,
+        Color = ColorSequence.new(
+            Color3.fromHex("FF0F7B"),
+            Color3.fromHex("F89B29")
+        ),
+        Enabled = true,
+        Draggable = true,
+        OnlyMobile = false,
     }
 })
 
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local LocalPlayer = Players.LocalPlayer
 
+-- Variables
 local autoBuy = false
 local autoBuyTask = nil
-
 local autoBuyRagdoll = false
 local autoBuyRagdollTask = nil
-
-local SPIN_MULTIPLIER = 40
-local IMPULSE_INTERVAL = 0.1
-local IMPULSE_STRENGTH = 1200
-local ANGVEL_STRENGTH = 1000
-
-local inputValue = 0
-local spinSpeed = 0
-local glitchedFlying = false
-local spinConn = nil
-local impulseTask = nil
-local currentHRP = nil
-
-local function getHRP(char)
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-end
-
-local function clearPhysicsExtras(hrp)
-    if not hrp then return end
-    for _, c in ipairs(hrp:GetChildren()) do
-        if c.Name == "__SPIN_ANGVEL__" or c.Name == "__SPIN_BODYVELOCITY__" then
-            pcall(function() c:Destroy() end)
-        end
-    end
-end
-
-local function applyPhysicsImpulse(hrp)
-    if not hrp or not hrp.Parent then return end
-    if IMPULSE_STRENGTH and IMPULSE_STRENGTH > 0 then
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "__SPIN_BODYVELOCITY__"
-        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        local forward = hrp.CFrame.LookVector
-        bv.Velocity = forward * IMPULSE_STRENGTH + Vector3.new(0, IMPULSE_STRENGTH * 0.18, 0)
-        bv.P = 1250
-        bv.Parent = hrp
-        delay(0.12, function()
-            if bv and bv.Parent then pcall(function() bv:Destroy() end) end
-        end)
-    end
-    if ANGVEL_STRENGTH and ANGVEL_STRENGTH > 0 then
-        local ang = Instance.new("AngularVelocity")
-        ang.Name = "__SPIN_ANGVEL__"
-        ang.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-        local axis = Vector3.new(0,1,0) + Vector3.new((math.random()-0.5)*0.22, 0, (math.random()-0.5)*0.22)
-        ang.AngularVelocity = axis.Unit * (ANGVEL_STRENGTH * ((spinSpeed/1000) + 0.6))
-        ang.Parent = hrp
-        delay(0.18, function()
-            if ang and ang.Parent then pcall(function() ang:Destroy() end) end
-        end)
-    end
-end
-
-local function startCFrameSpin(hrp)
-    if spinConn then return end
-    spinConn = RunService.Stepped:Connect(function(_, dt)
-        if not glitchedFlying or not hrp or not hrp.Parent then return end
-        local degPerSec = (spinSpeed or 0) * SPIN_MULTIPLIER
-        if degPerSec <= 0 then return end
-        local rotateDeg = degPerSec * dt
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(rotateDeg), 0)
-    end)
-end
-
-local function stopGlitchedFly()
-    glitchedFlying = false
-    if spinConn then
-        spinConn:Disconnect()
-        spinConn = nil
-    end
-    if impulseTask then
-        pcall(task.cancel, impulseTask)
-        impulseTask = nil
-    end
-    if currentHRP then
-        clearPhysicsExtras(currentHRP)
-        currentHRP = nil
-    end
-end
-
-local function startGlitchedFlyForCharacter(char)
-    if not char then return end
-    stopGlitchedFly()
-    currentHRP = getHRP(char)
-    if not currentHRP then
-        currentHRP = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 2) or getHRP(char)
-    end
-    if not currentHRP then return end
-    glitchedFlying = true
-    startCFrameSpin(currentHRP)
-    if IMPULSE_INTERVAL and IMPULSE_INTERVAL > 0 then
-        impulseTask = task.spawn(function()
-            while glitchedFlying do
-                if currentHRP and currentHRP.Parent then
-                    pcall(function()
-                        applyPhysicsImpulse(currentHRP)
-                    end)
-                end
-                task.wait(IMPULSE_INTERVAL)
-            end
-        end)
-    end
-end
 
 local isActive = false
 local damageObjects = {}
 local damageConnection = nil
+local spawnCount = 10
 
-local invisibleSpawned = true
-local spawnCount = 20
+local forceMovement = false
+local forceMovementLoop = nil
+local autoFarmWasActive = false
+local isMovingWithJoystick = false
 
 local STRONG = {
     MIN_SPEED = 180,
@@ -172,6 +52,15 @@ local STRONG = {
     BODY_MAXFORCE = 1e6,
 }
 
+local defaultGravity = workspace.Gravity
+local gravityOn = false
+local desiredGravity = 100000
+
+local autoClaim = false
+local autoAccept = false
+local autoMastery = false
+
+-- Helper Functions
 local function setPartVisibility(part, invisible)
     if not part then return end
     if invisible then
@@ -254,24 +143,24 @@ local function moveDamageObjects()
                 bodyVel.Velocity = Vector3.new(0, 0, 0)
             end
 
-if math.random(1, STRONG.BOOST_CHANCE) == 1 then
-    local boostDir = (playerPosition - part.Position)
-    boostDir = Vector3.new(boostDir.X, 0, boostDir.Z)
-    if boostDir.Magnitude == 0 then
-        boostDir = Vector3.new((math.random()-0.5), 0, (math.random()-0.5))
-    end
-    boostDir = boostDir.Unit
-    local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
-    bodyVel.Velocity = boostDir * boostSpeed
+            if math.random(1, STRONG.BOOST_CHANCE) == 1 then
+                local boostDir = (playerPosition - part.Position)
+                boostDir = Vector3.new(boostDir.X, 0, boostDir.Z)
+                if boostDir.Magnitude == 0 then
+                    boostDir = Vector3.new((math.random()-0.5), 0, (math.random()-0.5))
+                end
+                boostDir = boostDir.Unit
+                local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
+                bodyVel.Velocity = boostDir * boostSpeed
 
-    local origMax = bodyVel.MaxForce
-    bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
-    delay(0.15, function()
-        if bodyVel and bodyVel.Parent then
-            bodyVel.MaxForce = origMax
-        end
-    end)
-end
+                local origMax = bodyVel.MaxForce
+                bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
+                delay(0.15, function()
+                    if bodyVel and bodyVel.Parent then
+                        bodyVel.MaxForce = origMax
+                    end
+                end)
+            end
 
             part.CFrame = part.CFrame * CFrame.Angles(
                 math.rad(math.random(-40, 40)),
@@ -313,78 +202,6 @@ local function ensureDamageLoop()
     end)
 end
 
-local function characterCleanup()
-    if damageConnection then
-        damageConnection:Disconnect()
-        damageConnection = nil
-    end
-    cleanupDamageObjects()
-end
-
-local SpinSlider = Tab1:AddSlider({
-    Name = "Auto Farm V1 ",
-    Description = "Little slower but discreet",
-    Min = 0,
-    Max = 88888,
-    Increase = 1,
-    Default = 0
-})
-SpinSlider:Callback(function(val)
-    local valnum = tonumber(val) or 0
-    inputValue = valnum
-    spinSpeed = inputValue
-    if spinSpeed ~= 0 then
-        local pl = LocalPlayer
-        local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
-        if char then
-            startGlitchedFlyForCharacter(char)
-        end
-    else
-        stopGlitchedFly()
-    end
-end)
-
-local ToggleDamage = Tab1:AddToggle({
-    Name = "Auto Fam v2",
-    Description = "Better but more Risky",
-    Default = false
-})
-ToggleDamage:Callback(function(state)
-    isActive = state
-    if isActive then
-        if #damageObjects == 0 then
-            createDamageObjects()
-        else
-            updateAllPartVisibility(true)
-        end
-        ensureDamageLoop()
-    else
-        if damageConnection then
-            damageConnection:Disconnect()
-            damageConnection = nil
-        end
-        cleanupDamageObjects()
-    end
-end)
-
-local SpawnCountSlider = Tab1:AddSlider({
-    Name = "Strength Auto Farm v2",
-    Min = 1,
-    Max = 100,
-    Increase = 1,
-    Default = spawnCount
-})
-SpawnCountSlider:Callback(function(val)
-    local n = tonumber(val) or spawnCount
-    spawnCount = math.clamp(math.floor(n), 1, 100)
-end)
-
-local physService = game:GetService("Workspace")
-local defaultGravity = workspace.Gravity
-
-local gravityOn = false
-local desiredGravity = 100000
-
 local function setGravity(on)
     local ok, err = pcall(function()
         if on then
@@ -398,1137 +215,314 @@ local function setGravity(on)
     end
 end
 
-Tab1:AddToggle({
-    Name = "Heavy Boi",
-    Description = "Insanely High Gravity (Auto Farm Bypass Toggle for Longer Auto Farm Runs)",
-    Default = false,
-    Callback = function(val)
-        gravityOn = val
-        setGravity(gravityOn)
-    end
-})
-
-local autoClaim = false
-local autoAccept = false
-
-local function fireRemote(remoteName)
-    local success, err = pcall(function()
-        local player = game:GetService("Players").LocalPlayer
-        local targetPlayer = game:GetService("Players"):FindFirstChild(player.Name) or player
-        local args = { targetPlayer }
-        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-        local remote = remotes:WaitForChild(remoteName)
-        remote:FireServer(unpack(args))
-    end)
-    if not success then
-        warn("Fehler beim Aufrufen von " .. remoteName .. ": " .. tostring(err))
-    end
-end
-
-spawn(function()
-    while true do
-        if autoClaim then
-            fireRemote("ClaimQuest")
-        end
-        wait(3)
-    end
-end)
-
-spawn(function()
-    while true do
-        if autoAccept then
-            fireRemote("StartQuest")
-        end
-        wait(3)
-    end
-end)
-
-Tab1:AddToggle({
-  Name = "Auto Claim Quest",
-  Default = false,
-  Callback = function(v)
-    autoClaim = v
-  end
-})
-
-Tab1:AddToggle({
-  Name = "Auto Accept Quest",
-  Default = false,
-  Callback = function(v)
-    autoAccept = v
-  end
-})
-
-local autoMastery = false
-
-local function fireMastery()
-    local ok, err = pcall(function()
-        local player = game:GetService("Players").LocalPlayer
-        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-        local remote = remotes:WaitForChild("MasteryLevel")
-        remote:FireServer(player)
-    end)
-    if not ok then
-        warn("Fehler beim Aufrufen von MasteryLevel: "..tostring(err))
-    end
-end
-
-spawn(function()
-    while true do
-        if autoMastery then
-            fireMastery()
-        end
-        wait(3)
-    end
-end)
-
-Tab1:AddToggle({
-  Name = "Auto Claim Mastery",
-  Default = false,
-  Callback = function(v)
-    autoMastery = v
-  end
-})
-
-local ToggleAutoBuy = Tab2:AddToggle({
-    Name = "Auto Buy Body Parts",
-    Description = "Automatically purchases body parts",
-    Default = false
-})
-ToggleAutoBuy:Callback(function(state)
-    autoBuy = state
-    if autoBuy then
-        if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
-        autoBuyTask = task.spawn(function()
-            while autoBuy do
-                for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
-                    pcall(function()
-                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
-                    end)
-                end
-                task.wait(0.5)
-            end
-        end)
-    else
-        if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
-    end
-end)
-
-local ToggleAutoBuyRagdoll = Tab2:AddToggle({
-    Name = "Auto Buy Next Ragdoll",
-    Description = "Automatically purchases next ragdoll",
-    Default = false
-})
-ToggleAutoBuyRagdoll:Callback(function(state)
-    autoBuyRagdoll = state
-    if autoBuyRagdoll then
-        if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
-        autoBuyRagdollTask = task.spawn(function()
-            while autoBuyRagdoll do
-                pcall(function()
-                    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-                end)
-                task.wait(0.5)
-            end
-        end)
-    else
-        if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
-    end
-end)
-
-local success, redzlib = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/tbao143/Library-ui/refs/heads/main/Redzhubui"))()
-end)
-
-if not success or not redzlib then
-    warn("Failed to load redzlib:", redzlib)
-    return
-end
-
-local Window = redzlib:MakeWindow({
-    Title = "Xterm Break Bones v2",
-    SubTitle = "by qx0_",
-    SaveFolder = "Xterm_redzlib_config"
-})
-
-pcall(function()
-Window:AddMinimizeButton({
-    Button = { Image = "rbxassetid://6023426926", BackgroundTransparency = 0 },
-    Corner = { CornerRadius = UDim.new(35, 1) },
-})
-end)
-
-pcall(function()
-    if redzlib.SetTheme then
-        redzlib:SetTheme("Dark")
-    end
-end)
-
-local Tab1 = Window:MakeTab({"Auto Farm", "bone"})
-local Section = Tab1:AddSection({"🦴🔨Bone Breaker🔨🦴"})
-
-local Tab2 = Window:MakeTab({"Shop"})
-local Section = Tab2:AddSection({"🛍️Shopping🛍️"})
-
-Window:Dialog({
-    Title = "Xterm Break Your Bones",
-    Text = "is Loaded",
-    Options = {
-        {"OK", function() end}
-    }
-})
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local LocalPlayer = Players.LocalPlayer
-
-local autoBuy = false
-local autoBuyTask = nil
-
-local autoBuyRagdoll = false
-local autoBuyRagdollTask = nil
-
-local SPIN_MULTIPLIER = 40
-local IMPULSE_INTERVAL = 0.1
-local IMPULSE_STRENGTH = 1200
-local ANGVEL_STRENGTH = 1000
-
-local inputValue = 0
-local spinSpeed = 0
-local glitchedFlying = false
-local spinConn = nil
-local impulseTask = nil
-local currentHRP = nil
-
-local function getHRP(char)
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-end
-
-local function clearPhysicsExtras(hrp)
-    if not hrp then return end
-    for _, c in ipairs(hrp:GetChildren()) do
-        if c.Name == "__SPIN_ANGVEL__" or c.Name == "__SPIN_BODYVELOCITY__" then
-            pcall(function() c:Destroy() end)
-        end
-    end
-end
-
-local function applyPhysicsImpulse(hrp)
-    if not hrp or not hrp.Parent then return end
-    if IMPULSE_STRENGTH and IMPULSE_STRENGTH > 0 then
-        local bv = Instance.new("BodyVelocity")
-        bv.Name = "__SPIN_BODYVELOCITY__"
-        bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        local forward = hrp.CFrame.LookVector
-        bv.Velocity = forward * IMPULSE_STRENGTH + Vector3.new(0, IMPULSE_STRENGTH * 0.18, 0)
-        bv.P = 1250
-        bv.Parent = hrp
-        delay(0.12, function()
-            if bv and bv.Parent then pcall(function() bv:Destroy() end) end
-        end)
-    end
-    if ANGVEL_STRENGTH and ANGVEL_STRENGTH > 0 then
-        local ang = Instance.new("AngularVelocity")
-        ang.Name = "__SPIN_ANGVEL__"
-        ang.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
-        local axis = Vector3.new(0,1,0) + Vector3.new((math.random()-0.5)*0.22, 0, (math.random()-0.5)*0.22)
-        ang.AngularVelocity = axis.Unit * (ANGVEL_STRENGTH * ((spinSpeed/1000) + 0.6))
-        ang.Parent = hrp
-        delay(0.18, function()
-            if ang and ang.Parent then pcall(function() ang:Destroy() end) end
-        end)
-    end
-end
-
-local function startCFrameSpin(hrp)
-    if spinConn then return end
-    spinConn = RunService.Stepped:Connect(function(_, dt)
-        if not glitchedFlying or not hrp or not hrp.Parent then return end
-        local degPerSec = (spinSpeed or 0) * SPIN_MULTIPLIER
-        if degPerSec <= 0 then return end
-        local rotateDeg = degPerSec * dt
-        hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(rotateDeg), 0)
-    end)
-end
-
-local function stopGlitchedFly()
-    glitchedFlying = false
-    if spinConn then
-        spinConn:Disconnect()
-        spinConn = nil
-    end
-    if impulseTask then
-        pcall(task.cancel, impulseTask)
-        impulseTask = nil
-    end
-    if currentHRP then
-        clearPhysicsExtras(currentHRP)
-        currentHRP = nil
-    end
-end
-
-local function startGlitchedFlyForCharacter(char)
-    if not char then return end
-    stopGlitchedFly()
-    currentHRP = getHRP(char)
-    if not currentHRP then
-        currentHRP = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 2) or getHRP(char)
-    end
-    if not currentHRP then return end
-    glitchedFlying = true
-    startCFrameSpin(currentHRP)
-    if IMPULSE_INTERVAL and IMPULSE_INTERVAL > 0 then
-        impulseTask = task.spawn(function()
-            while glitchedFlying do
-                if currentHRP and currentHRP.Parent then
-                    pcall(function()
-                        applyPhysicsImpulse(currentHRP)
-                    end)
-                end
-                task.wait(IMPULSE_INTERVAL)
-            end
-        end)
-    end
-end
-
-local isActive = false
-local damageObjects = {}
-local damageConnection = nil
-
-local invisibleSpawned = true
-local spawnCount = 20
-
-local STRONG = {
-    MIN_SPEED = 180,
-    MAX_SPEED = 420,
-    BOOST_MIN = 500,
-    BOOST_MAX = 900,
-    BOOST_CHANCE = 3,
-    BODY_MAXFORCE = 1e6,
-}
-
-local function setPartVisibility(part, invisible)
-    if not part then return end
-    if invisible then
-        part.Transparency = 1
-        part.CastShadow = false
-    else
-        part.Transparency = 0
-        part.CastShadow = true
-    end
-end
-
-local function createDamageObjects()
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local playerPosition = character.HumanoidRootPart.Position
-
-    for i = 1, spawnCount do
-        local part = Instance.new("Part")
-        part.Name = "DamageObject_" .. i
-        part.Size = Vector3.new(
-            math.random(3, 10),
-            math.random(3, 10),
-            math.random(3, 10)
-        )
-        part.Material = Enum.Material.Concrete
-        part.BrickColor = BrickColor.new("Really black")
-        part.CanCollide = true
-        part.Anchored = false
-        part.CFrame = CFrame.new(playerPosition + Vector3.new(
-            math.random(-18, 18),
-            math.random(0, 8),
-            math.random(-18, 18)
-        ))
-        part.Parent = workspace
-
-        setPartVisibility(part, true)
-
-        local bodyVel = Instance.new("BodyVelocity")
-        bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
-        bodyVel.Velocity = Vector3.new(0, 0, 0)
-        bodyVel.Parent = part
-
-        table.insert(damageObjects, {part = part, bodyVel = bodyVel})
-    end
-end
-
-local function updateAllPartVisibility(invisible)
-    for _, objData in pairs(damageObjects) do
-        if objData and objData.part and objData.part.Parent then
-            setPartVisibility(objData.part, true)
-        end
-    end
-end
-
-local function moveDamageObjects()
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local playerPosition = character.HumanoidRootPart.Position
-
-    for _, objData in pairs(damageObjects) do
-        if objData and objData.part and objData.part.Parent and objData.bodyVel then
-            local part = objData.part
-            local bodyVel = objData.bodyVel
-
-            local time = tick() * 4
-            local radius = math.random(6, 20)
-            local angle = time + (part.Name:byte() * 0.2)
-
-            local targetPos = playerPosition + Vector3.new(
-                math.cos(angle) * radius,
-                math.sin(time * 2) * 12,
-                math.sin(angle) * radius
-            )
-
-            local dir = (targetPos - part.Position)
-            if dir.Magnitude > 0.1 then
-                local baseSpeed = math.random(STRONG.MIN_SPEED, STRONG.MAX_SPEED)
-                bodyVel.Velocity = dir.Unit * baseSpeed
-            else
-                bodyVel.Velocity = Vector3.new(0, 0, 0)
-            end
-
-if math.random(1, STRONG.BOOST_CHANCE) == 1 then
-    local boostDir = (playerPosition - part.Position)
-    boostDir = Vector3.new(boostDir.X, 0, boostDir.Z)
-    if boostDir.Magnitude == 0 then
-        boostDir = Vector3.new((math.random()-0.5), 0, (math.random()-0.5))
-    end
-    boostDir = boostDir.Unit
-    local boostSpeed = math.random(STRONG.BOOST_MIN, STRONG.BOOST_MAX)
-    bodyVel.Velocity = boostDir * boostSpeed
-
-    local origMax = bodyVel.MaxForce
-    bodyVel.MaxForce = Vector3.new(STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE, STRONG.BODY_MAXFORCE)
-    delay(0.15, function()
-        if bodyVel and bodyVel.Parent then
-            bodyVel.MaxForce = origMax
-        end
-    end)
-end
-
-            part.CFrame = part.CFrame * CFrame.Angles(
-                math.rad(math.random(-40, 40)),
-                math.rad(math.random(-40, 40)),
-                math.rad(math.random(-40, 40))
-            )
-        end
-    end
-end
-
-local function cleanupDamageObjects()
-    for _, objData in pairs(damageObjects) do
-        if objData and objData.part and objData.part.Parent then
-            objData.part:Destroy()
-        end
-    end
-    damageObjects = {}
-end
-
-local function breakBones()
-    local character = LocalPlayer.Character
-    if not character then return end
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.WalkSpeed = math.max(2, humanoid.WalkSpeed * 0.3)
-        humanoid.JumpPower = math.max(5, humanoid.JumpPower * 0.2)
-    end
-end
-
-local function ensureDamageLoop()
-    if damageConnection and damageConnection.Connected then return end
-    damageConnection = RunService.Heartbeat:Connect(function()
-        if isActive then
-            moveDamageObjects()
-            if math.random(1, 120) == 1 then
-                breakBones()
-            end
-        end
-    end)
-end
-
-local function characterCleanup()
-    if damageConnection then
-        damageConnection:Disconnect()
-        damageConnection = nil
-    end
-    cleanupDamageObjects()
-end
-
-local SpinSlider = Tab1:AddSlider({
-    Name = "Auto Farm V1 ",
-    Description = "Little slower but discreet",
-    Min = 0,
-    Max = 88888,
-    Increase = 1,
-    Default = 0
-})
-SpinSlider:Callback(function(val)
-    local valnum = tonumber(val) or 0
-    inputValue = valnum
-    spinSpeed = inputValue
-    if spinSpeed ~= 0 then
-        local pl = LocalPlayer
-        local char = pl and (pl.Character or pl.CharacterAdded and pl.CharacterAdded:Wait())
-        if char then
-            startGlitchedFlyForCharacter(char)
-        end
-    else
-        stopGlitchedFly()
-    end
-end)
-
-local ToggleDamage = Tab1:AddToggle({
-    Name = "Auto Fam v2",
-    Description = "Better but more Risky",
-    Default = false
-})
-ToggleDamage:Callback(function(state)
-    isActive = state
-    if isActive then
-        if #damageObjects == 0 then
-            createDamageObjects()
-        else
-            updateAllPartVisibility(true)
-        end
-        ensureDamageLoop()
-    else
-        if damageConnection then
-            damageConnection:Disconnect()
-            damageConnection = nil
-        end
-        cleanupDamageObjects()
-    end
-end)
-
-local SpawnCountSlider = Tab1:AddSlider({
-    Name = "Strength Auto Farm v2",
-    Min = 1,
-    Max = 100,
-    Increase = 1,
-    Default = spawnCount
-})
-SpawnCountSlider:Callback(function(val)
-    local n = tonumber(val) or spawnCount
-    spawnCount = math.clamp(math.floor(n), 1, 100)
-end)
-
-local physService = game:GetService("Workspace")
-local defaultGravity = workspace.Gravity
-
-local gravityOn = false
-local desiredGravity = 100000
-
-local function setGravity(on)
-    local ok, err = pcall(function()
-        if on then
-            workspace.Gravity = desiredGravity
-        else
-            workspace.Gravity = defaultGravity or 196.2
-        end
-    end)
-    if not ok then
-        warn("Fehler beim Setzen der Gravität: "..tostring(err))
-    end
-end
-
-Tab1:AddToggle({
-    Name = "Heavy Boi",
-    Description = "Insanely High Gravity (Auto Farm Bypass Toggle for Longer Auto Farm Runs)",
-    Default = false,
-    Callback = function(val)
-        gravityOn = val
-        setGravity(gravityOn)
-    end
-})
-
-local autoClaim = false
-local autoAccept = false
-
-local function fireRemote(remoteName)
-    local success, err = pcall(function()
-        local player = game:GetService("Players").LocalPlayer
-        local targetPlayer = game:GetService("Players"):FindFirstChild(player.Name) or player
-        local args = { targetPlayer }
-        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-        local remote = remotes:WaitForChild(remoteName)
-        remote:FireServer(unpack(args))
-    end)
-    if not success then
-        warn("Fehler beim Aufrufen von " .. remoteName .. ": " .. tostring(err))
-    end
-end
-
-spawn(function()
-    while true do
-        if autoClaim then
-            fireRemote("ClaimQuest")
-        end
-        wait(3)
-    end
-end)
-
-spawn(function()
-    while true do
-        if autoAccept then
-            fireRemote("StartQuest")
-        end
-        wait(3)
-    end
-end)
-
-Tab1:AddToggle({
-  Name = "Auto Claim Quest",
-  Default = false,
-  Callback = function(v)
-    autoClaim = v
-  end
-})
-
-Tab1:AddToggle({
-  Name = "Auto Accept Quest",
-  Default = false,
-  Callback = function(v)
-    autoAccept = v
-  end
-})
-
-local autoMastery = false
-
-local function fireMastery()
-    local ok, err = pcall(function()
-        local player = game:GetService("Players").LocalPlayer
-        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
-        local remote = remotes:WaitForChild("MasteryLevel")
-        remote:FireServer(player)
-    end)
-    if not ok then
-        warn("Fehler beim Aufrufen von MasteryLevel: "..tostring(err))
-    end
-end
-
-spawn(function()
-    while true do
-        if autoMastery then
-            fireMastery()
-        end
-        wait(3)
-    end
-end)
-
-Tab1:AddToggle({
-  Name = "Auto Claim Mastery",
-  Default = false,
-  Callback = function(v)
-    autoMastery = v
-  end
-})
-
-local ToggleAutoBuy = Tab2:AddToggle({
-    Name = "Auto Buy Body Parts",
-    Description = "Automatically purchases body parts",
-    Default = false
-})
-ToggleAutoBuy:Callback(function(state)
-    autoBuy = state
-    if autoBuy then
-        if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
-        autoBuyTask = task.spawn(function()
-            while autoBuy do
-                for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
-                    pcall(function()
-                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
-                    end)
-                end
-                task.wait(0.5)
-            end
-        end)
-    else
-        if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
-    end
-end)
-
-local ToggleAutoBuyRagdoll = Tab2:AddToggle({
-    Name = "Auto Buy Next Ragdoll",
-    Description = "Automatically purchases next ragdoll",
-    Default = false
-})
-ToggleAutoBuyRagdoll:Callback(function(state)
-    autoBuyRagdoll = state
-    if autoBuyRagdoll then
-        if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
-        autoBuyRagdollTask = task.spawn(function()
-            while autoBuyRagdoll do
-                pcall(function()
-                    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-                end)
-                task.wait(0.5)
-            end
-        end)
-    else
-        if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
-    end
-end)
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RollPalRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RollPal")
-
-local Toggle1 = Tab2:AddToggle({
-  Name = "Auto Buy Next Pal",
-  Description = "Automatically purchases next pals",
-  Default = false
-})
-
-local autoRunning = false
-local autoConn
-
-Toggle1:Callback(function(Value)
-  if Value and not autoRunning then
-    autoRunning = true
-    autoConn = task.spawn(function()
-      while autoRunning do
+local function startForceMovement()
+    if forceMovementLoop then return end
+    
+    forceMovementLoop = RunService.Heartbeat:Connect(function()
+        if not forceMovement then return end
+        
+        local character = LocalPlayer.Character
+        if not character then return end
+        
         pcall(function()
-          RollPalRemote:FireServer()
-        end)
-        task.wait(0.5)
-      end
-    end)
-  elseif not Value and autoRunning then
-    autoRunning = false
-    autoConn = nil
-  end
-end)
-
-Tab2:AddButton({"Buy Next Pal", function()
-  pcall(function()
-    RollPalRemote:FireServer()
-  end)
-end})
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-
-local Ragdolls = {}
-
-local function contains(t, v)
-    for _, x in ipairs(t) do if x == v then return true end end
-    return false
-end
-
-local function addRagdoll(name)
-    if not name or name == "" then return false end
-    for _, v in ipairs(Ragdolls) do if v == name then return false end end
-    table.insert(Ragdolls, name)
-    return true
-end
-
-local function detectCurrentRagdoll()
-    local a = player:GetAttribute("Ragdoll")
-    if a and a ~= "" then return tostring(a) end
-
-    if player.Character then
-        a = player.Character:GetAttribute("Ragdoll")
-        if a and a ~= "" then return tostring(a) end
-    end
-
-    for _, cont in ipairs({player, player.Character}) do
-        if cont then
-            for _, obj in ipairs(cont:GetChildren()) do
-                if obj:IsA("StringValue") then
-                    local n = obj.Name:lower()
-                    if n:find("ragdoll") and obj.Value and obj.Value ~= "" then
-                        return tostring(obj.Value)
+            local humanoid = character:FindFirstChild("Humanoid")
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and hrp then
+                local moveDir = humanoid.MoveDirection
+                
+                -- Prüfen ob Joystick bewegt wird (threshold erhöht für bessere Erkennung)
+                if moveDir.Magnitude > 0.05 then
+                    if not isMovingWithJoystick then
+                        -- Joystick wurde gerade bewegt - Auto Farm pausieren
+                        isMovingWithJoystick = true
+                        if isActive then
+                            autoFarmWasActive = true
+                            -- Damage Connection stoppen
+                            if damageConnection then
+                                damageConnection:Disconnect()
+                                damageConnection = nil
+                            end
+                            -- Objekte entfernen für freie Bewegung
+                            cleanupDamageObjects()
+                        end
                     end
-                end
-            end
-        end
-    end
-
-    local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
-    if folder then
-        for _, child in ipairs(folder:GetChildren()) do
-            if child.Name and child.Name ~= "" then
-                addRagdoll(child.Name)
-                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
-                    return child.Name
-                end
-            end
-        end
-    end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    if remotes then
-        local cur = remotes:FindFirstChild("CurrentRagdoll") or remotes:FindFirstChild("GetCurrentRagdoll")
-        if cur then
-            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
-                return tostring(cur.Value)
-            elseif cur:IsA("RemoteFunction") then
-                local ok, res = pcall(function() return cur:InvokeServer() end)
-                if ok and res and res ~= "" then return tostring(res) end
-            end
-        end
-    end
-
-    return nil
-end
-
-local function initialFill()
-    local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
-    if folder then
-        for _, c in ipairs(folder:GetChildren()) do
-            if c.Name and c.Name ~= "" then addRagdoll(c.Name) end
-        end
-    end
-    local defaults = {"Default","Noodle","Mutant"}
-    for _, d in ipairs(defaults) do addRagdoll(d) end
-end
-
-initialFill()
-local detected = detectCurrentRagdoll()
-if detected then addRagdoll(detected) end
-
-local selectedRagdoll = detected or Ragdolls[1]
-
-local DropdownRagdoll = Tab2:AddDropdown({
-    Name = "Select Ragdoll",
-    Description = "Shows all Ragdolls",
-    Options = Ragdolls,
-    Default = selectedRagdoll,
-    Callback = function(val) selectedRagdoll = val end
-})
-
-local function refreshDropdown()
-    if DropdownRagdoll.SetOptions then
-        DropdownRagdoll:SetOptions(Ragdolls)
-    elseif DropdownRagdoll.UpdateOptions then
-        DropdownRagdoll:UpdateOptions(Ragdolls)
-    else
-        if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(selectedRagdoll or Ragdolls[1]) end
-    end
-end
-
-player:GetAttributeChangedSignal("Ragdoll"):Connect(function()
-    local v = player:GetAttribute("Ragdoll")
-    if v and addRagdoll(v) then refreshDropdown() end
-    if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.05)
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("StringValue") and obj.Name:lower():find("ragdoll") and obj.Value and obj.Value ~= "" then
-            if addRagdoll(obj.Value) then refreshDropdown() end
-            selectedRagdoll = obj.Value
-            if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(obj.Value) end
-            break
-        end
-    end
-    if char.GetAttributeChangedSignal then
-        char:GetAttributeChangedSignal("Ragdoll"):Connect(function()
-            local v = char:GetAttribute("Ragdoll")
-            if v and addRagdoll(v) then refreshDropdown() end
-            if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(3)
-        local found = false
-        local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
-        if folder then
-            for _, child in ipairs(folder:GetChildren()) do
-                if child.Name and addRagdoll(child.Name) then found = true end
-            end
-        end
-        if found then refreshDropdown() end
-    end
-end)
-
-Tab2:AddButton({"Equip Selected Ragdoll", function()
-    local toEquip = selectedRagdoll or Ragdolls[1]
-    if not toEquip or toEquip == "" then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
-        if remotes and remotes:FindFirstChild("EquipRagdoll") then
-            remotes:WaitForChild("EquipRagdoll"):FireServer(toEquip)
-        else
-            warn("EquipRagdoll remote not found")
-        end
-    end)
-end})
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-
-local Tab2 = Tab2
-
-local Materials = {}
-
-local function contains(t, v)
-    for _, x in ipairs(t) do if x == v then return true end end
-    return false
-end
-
-local function addMaterial(name)
-    if not name or name == "" then return false end
-    for _, v in ipairs(Materials) do if v == name then return false end end
-    table.insert(Materials, name)
-    return true
-end
-
-local function detectCurrentMaterial()
-    local a = player:GetAttribute("Material")
-    if a and a ~= "" then return tostring(a) end
-
-    if player.Character then
-        a = player.Character:GetAttribute("Material")
-        if a and a ~= "" then return tostring(a) end
-    end
-
-    for _, cont in ipairs({player, player.Character}) do
-        if cont then
-            for _, obj in ipairs(cont:GetChildren()) do
-                if obj:IsA("StringValue") then
-                    local n = obj.Name:lower()
-                    if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
-                        return tostring(obj.Value)
-                    end
-                end
-            end
-        end
-    end
-
-    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-    if folder then
-        for _, child in ipairs(folder:GetChildren()) do
-            if child.Name and child.Name ~= "" then
-                addMaterial(child.Name)
-                -- optional: try match by character name (falls relevant)
-                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
-                    return child.Name
-                end
-            end
-        end
-    end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    if remotes then
-        local cur = remotes:FindFirstChild("CurrentMaterial") or remotes:FindFirstChild("GetCurrentMaterial")
-        if cur then
-            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
-                return tostring(cur.Value)
-            elseif cur:IsA("RemoteFunction") then
-                local ok, res = pcall(function() return cur:InvokeServer() end)
-                if ok and res and res ~= "" then return tostring(res) end
-            end
-        end
-    end
-
-    return nil
-end
-
-local function initialFill()
-    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-    if folder then
-        for _, c in ipairs(folder:GetChildren()) do
-            if c.Name and c.Name ~= "" then addMaterial(c.Name) end
-        end
-    end
-    local defaults = {"Default", "Spark", "Glass"}
-    for _, d in ipairs(defaults) do addMaterial(d) end
-end
-
-initialFill()
-local detected = detectCurrentMaterial()
-if detected then addMaterial(detected) end
-
-local selectedMaterial = detected or Materials[1]
-
-local DropdownMaterial = Tab2:AddDropdown({
-    Name = "Select Material",
-    Description = "Shows all Materials/Modifiers",
-    Options = Materials,
-    Default = selectedMaterial,
-    Callback = function(val) selectedMaterial = val end
-})
-
-local function refreshDropdown()
-    if DropdownMaterial.SetOptions then
-        DropdownMaterial:SetOptions(Materials)
-    elseif DropdownMaterial.UpdateOptions then
-        DropdownMaterial:UpdateOptions(Materials)
-    else
-        if DropdownMaterial.SetValue then DropdownMaterial:SetValue(selectedMaterial or Materials[1]) end
-    end
-end
-
-player:GetAttributeChangedSignal("Material"):Connect(function()
-    local v = player:GetAttribute("Material")
-    if v and addMaterial(v) then refreshDropdown() end
-    if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.05)
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("StringValue") then
-            local n = obj.Name:lower()
-            if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
-                if addMaterial(obj.Value) then refreshDropdown() end
-                selectedMaterial = obj.Value
-                if DropdownMaterial.SetValue then DropdownMaterial:SetValue(obj.Value) end
-                break
-            end
-        end
-    end
-    if char.GetAttributeChangedSignal then
-        char:GetAttributeChangedSignal("Material"):Connect(function()
-            local v = char:GetAttribute("Material")
-            if v and addMaterial(v) then refreshDropdown() end
-            if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(3)
-        local found = false
-        local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-        if folder then
-            for _, child in ipairs(folder:GetChildren()) do
-                if child.Name and addMaterial(child.Name) then found = true end
-            end
-        end
-        if found then refreshDropdown() end
-    end
-end)
-
-Tab2:AddButton({"Equip Selected Material", function()
-    local toEquip = selectedMaterial or Materials[1]
-    if not toEquip or toEquip == "" then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
-        if remotes and remotes:FindFirstChild("SelectModifier") then
-            remotes:WaitForChild("SelectModifier"):FireServer(toEquip)
-        else
-            warn("SelectModifier remote not found")
-        end
-    end)
-end})
-
-Tab2:AddButton({"Buy All Body Parts One Time", function()
-    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
-        pcall(function()
-            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
-        end)
-    end
-end})
-
-Tab2:AddButton({"PurchaseNextRagdoll", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-    end)
-end})
-
-Tab2:AddButton({"RefineRagdoll", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
-    end)
-end})
-
-Tab2:AddButton({"Buy Head", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
-    end)
-end})
-
-Tab2:AddButton({"Buy Torso", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
-    end)
-end})
-
-Tab2:AddButton({"Buy Leg", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
-    end)
-end})
-
-Tab2:AddButton({"Buy Arm", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
-    end)
-end})
-
-LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.08)
-    if currentHRP then
-        clearPhysicsExtras(currentHRP)
-    end
-    currentHRP = nil
-    if spinSpeed and spinSpeed ~= 0 then
-        task.spawn(function()
-            task.wait(5)
-            if LocalPlayer.Character == char and spinSpeed and spinSpeed ~= 0 then
-                startGlitchedFlyForCharacter(char)
-            end
-        end)
-    end
-
-    local desired = isActive
-    if damageConnection then
-        damageConnection:Disconnect()
-        damageConnection = nil
-    end
-    cleanupDamageObjects()
-    if desired then
-        task.spawn(function()
-            task.wait(10)
-            if LocalPlayer.Character == char then
-                if #damageObjects == 0 then
-                    createDamageObjects()
+                    
+                    -- Force state to allow movement
+                    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                    humanoid.PlatformStand = false
+                    
+                    -- Apply move direction from joystick mit höherer Geschwindigkeit
+                    local currentVel = hrp.AssemblyLinearVelocity
+                    hrp.AssemblyLinearVelocity = Vector3.new(
+                        moveDir.X * 35,
+                        currentVel.Y,
+                        moveDir.Z * 35
+                    )
                 else
-                    updateAllPartVisibility(true)
+                    -- Joystick wurde losgelassen
+                    if isMovingWithJoystick then
+                        isMovingWithJoystick = false
+                        -- Auto Farm wieder aktivieren wenn es vorher an war
+                        if autoFarmWasActive and isActive then
+                            task.spawn(function()
+                                task.wait(0.5)
+                                if not isMovingWithJoystick and isActive then
+                                    createDamageObjects()
+                                    ensureDamageLoop()
+                                end
+                            end)
+                            autoFarmWasActive = false
+                        end
+                    end
                 end
-                ensureDamageLoop()
+            end
+        end)
+    end)
+end
+
+local function stopForceMovement()
+    if forceMovementLoop then
+        forceMovementLoop:Disconnect()
+        forceMovementLoop = nil
+    end
+    
+    -- Charakter wieder aufstehen lassen
+    local character = LocalPlayer.Character
+    if character then
+        pcall(function()
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.PlatformStand = false
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                task.wait(0.1)
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
             end
         end)
     end
-end)
+end
 
-if game.BindToClose then
-    pcall(function()
-        game:BindToClose(function()
-            stopGlitchedFly()
+local function fireRemote(remoteName)
+    local success, err = pcall(function()
+        local player = game:GetService("Players").LocalPlayer
+        local targetPlayer = game:GetService("Players"):FindFirstChild(player.Name) or player
+        local args = { targetPlayer }
+        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+        local remote = remotes:WaitForChild(remoteName)
+        remote:FireServer(unpack(args))
+    end)
+    if not success then
+        warn("Fehler beim Aufrufen von " .. remoteName .. ": " .. tostring(err))
+    end
+end
+
+local function fireMastery()
+    local ok, err = pcall(function()
+        local player = game:GetService("Players").LocalPlayer
+        local remotes = game:GetService("ReplicatedStorage"):WaitForChild("Remotes")
+        local remote = remotes:WaitForChild("MasteryLevel")
+        remote:FireServer(player)
+    end)
+    if not ok then
+        warn("Fehler beim Aufrufen von MasteryLevel: "..tostring(err))
+    end
+end
+
+-- Notification
+WindUI:Notify({
+    Title = "Xterm Break Your Bones",
+    Content = "Script Loaded!",
+    Icon = "check",
+})
+
+-- Tabs
+local AutoFarmTab = Window:Tab({
+    Title = "Auto Farm",
+    Icon = "zap",
+})
+
+local ShopTab = Window:Tab({
+    Title = "Shop",
+    Icon = "shopping-cart",
+})
+
+-- Auto Farm Tab
+AutoFarmTab:Section({
+    Title = "🦴🔨 Bone Breaker 🔨🦴",
+})
+
+AutoFarmTab:Toggle({
+    Title = "Auto Farm Smasher",
+    Desc = "Now the Main Auto Farm",
+    Default = false,
+    Callback = function(state)
+        isActive = state
+        if isActive then
+            if #damageObjects == 0 then
+                createDamageObjects()
+            else
+                updateAllPartVisibility(true)
+            end
+            ensureDamageLoop()
+        else
             if damageConnection then
                 damageConnection:Disconnect()
                 damageConnection = nil
             end
             cleanupDamageObjects()
-        end)
-    end)
-end
+        end
+    end
+})
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
+AutoFarmTab:Slider({
+    Title = "Strength Auto Farm",
+    Desc = "Strength of Smasher",
+    Step = 1,
+    Value = {
+        Min = 1,
+        Max = 100,
+        Default = spawnCount,
+    },
+    Callback = function(val)
+        local n = tonumber(val) or spawnCount
+        spawnCount = math.clamp(math.floor(n), 1, 100)
+    end
+})
 
+AutoFarmTab:Space()
+
+AutoFarmTab:Toggle({
+    Title = "Make yourself Heavy",
+    Desc = "Insanely High Gravity",
+    Default = false,
+    Callback = function(val)
+        gravityOn = val
+        setGravity(gravityOn)
+    end
+})
+
+AutoFarmTab:Toggle({
+    Title = "Force Movement Control [BETA]",
+    Desc = "Perfect to get unstuck from some places works with Autofarm",
+    Default = false,
+    Callback = function(val)
+        forceMovement = val
+        if forceMovement then
+            startForceMovement()
+        else
+            stopForceMovement()
+        end
+    end
+})
+
+AutoFarmTab:Space()
+
+AutoFarmTab:Toggle({
+    Title = "Auto Claim Quest",
+    Default = false,
+    Callback = function(v)
+        autoClaim = v
+    end
+})
+
+AutoFarmTab:Toggle({
+    Title = "Auto Accept Quest",
+    Default = false,
+    Callback = function(v)
+        autoAccept = v
+    end
+})
+
+AutoFarmTab:Toggle({
+    Title = "Auto Claim Mastery",
+    Default = false,
+    Callback = function(v)
+        autoMastery = v
+    end
+})
+
+-- Shop Tab
+ShopTab:Section({
+    Title = "🛍️ Shopping 🛍️",
+})
+
+ShopTab:Toggle({
+    Title = "Auto Buy Body Parts",
+    Desc = "Automatically purchases body parts",
+    Default = false,
+    Callback = function(state)
+        autoBuy = state
+        if autoBuy then
+            if autoBuyTask and task.cancel then pcall(task.cancel, autoBuyTask) end
+            autoBuyTask = task.spawn(function()
+                while autoBuy do
+                    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+                        pcall(function()
+                            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+                        end)
+                    end
+                    task.wait(0.5)
+                end
+            end)
+        else
+            if autoBuyTask then pcall(task.cancel, autoBuyTask) autoBuyTask = nil end
+        end
+    end
+})
+
+ShopTab:Toggle({
+    Title = "Auto Buy Next Ragdoll",
+    Desc = "Automatically purchases next ragdoll",
+    Default = false,
+    Callback = function(state)
+        autoBuyRagdoll = state
+        if autoBuyRagdoll then
+            if autoBuyRagdollTask and task.cancel then pcall(task.cancel, autoBuyRagdollTask) end
+            autoBuyRagdollTask = task.spawn(function()
+                while autoBuyRagdoll do
+                    pcall(function()
+                        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        else
+            if autoBuyRagdollTask then pcall(task.cancel, autoBuyRagdollTask) autoBuyRagdollTask = nil end
+        end
+    end
+})
+
+-- Auto Buy Next Pal
+local RollPalRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RollPal")
+local autoRunning = false
+local autoConn
+
+ShopTab:Toggle({
+    Title = "Auto Buy Next Pal",
+    Desc = "Automatically purchases next pals",
+    Default = false,
+    Callback = function(Value)
+        if Value and not autoRunning then
+            autoRunning = true
+            autoConn = task.spawn(function()
+                while autoRunning do
+                    pcall(function()
+                        RollPalRemote:FireServer()
+                    end)
+                    task.wait(0.5)
+                end
+            end)
+        elseif not Value and autoRunning then
+            autoRunning = false
+            autoConn = nil
+        end
+    end
+})
+
+ShopTab:Space()
+
+-- Ragdoll Dropdown
 local Ragdolls = {}
-
-local function contains(t, v)
-    for _, x in ipairs(t) do if x == v then return true end end
-    return false
-end
-
 local function addRagdoll(name)
     if not name or name == "" then return false end
     for _, v in ipairs(Ragdolls) do if v == name then return false end end
@@ -1537,155 +531,68 @@ local function addRagdoll(name)
 end
 
 local function detectCurrentRagdoll()
-    local a = player:GetAttribute("Ragdoll")
+    local a = LocalPlayer:GetAttribute("Ragdoll")
     if a and a ~= "" then return tostring(a) end
-
-    if player.Character then
-        a = player.Character:GetAttribute("Ragdoll")
+    
+    if LocalPlayer.Character then
+        a = LocalPlayer.Character:GetAttribute("Ragdoll")
         if a and a ~= "" then return tostring(a) end
     end
-
-    for _, cont in ipairs({player, player.Character}) do
-        if cont then
-            for _, obj in ipairs(cont:GetChildren()) do
-                if obj:IsA("StringValue") then
-                    local n = obj.Name:lower()
-                    if n:find("ragdoll") and obj.Value and obj.Value ~= "" then
-                        return tostring(obj.Value)
-                    end
-                end
-            end
-        end
-    end
-
+    
     local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
     if folder then
         for _, child in ipairs(folder:GetChildren()) do
             if child.Name and child.Name ~= "" then
                 addRagdoll(child.Name)
-                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
-                    return child.Name
-                end
             end
         end
     end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    if remotes then
-        local cur = remotes:FindFirstChild("CurrentRagdoll") or remotes:FindFirstChild("GetCurrentRagdoll")
-        if cur then
-            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
-                return tostring(cur.Value)
-            elseif cur:IsA("RemoteFunction") then
-                local ok, res = pcall(function() return cur:InvokeServer() end)
-                if ok and res and res ~= "" then return tostring(res) end
-            end
-        end
-    end
-
+    
     return nil
 end
 
-local function initialFill()
-    local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
-    if folder then
-        for _, c in ipairs(folder:GetChildren()) do
-            if c.Name and c.Name ~= "" then addRagdoll(c.Name) end
-        end
-    end
-    local defaults = {"Default","Noodle","Mutant"}
-    for _, d in ipairs(defaults) do addRagdoll(d) end
-end
+local defaults = {"Default","Noodle","Mutant"}
+for _, d in ipairs(defaults) do addRagdoll(d) end
 
-initialFill()
 local detected = detectCurrentRagdoll()
 if detected then addRagdoll(detected) end
 
-local selectedRagdoll = detected or Ragdolls[1]
+local selectedRagdoll = detected or Ragdolls[1] or "Default"
 
-local DropdownRagdoll = Tab2:AddDropdown({
-    Name = "Select Ragdoll",
-    Description = "Shows all Ragdolls",
-    Options = Ragdolls,
-    Default = selectedRagdoll,
-    Callback = function(val) selectedRagdoll = val end
+ShopTab:Dropdown({
+    Title = "Select Ragdoll",
+    Desc = "Shows all Ragdolls",
+    Values = Ragdolls,
+    Value = selectedRagdoll,
+    Callback = function(val)
+        selectedRagdoll = val
+    end
 })
 
-local function refreshDropdown()
-    if DropdownRagdoll.SetOptions then
-        DropdownRagdoll:SetOptions(Ragdolls)
-    elseif DropdownRagdoll.UpdateOptions then
-        DropdownRagdoll:UpdateOptions(Ragdolls)
-    else
-        if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(selectedRagdoll or Ragdolls[1]) end
-    end
-end
-
-player:GetAttributeChangedSignal("Ragdoll"):Connect(function()
-    local v = player:GetAttribute("Ragdoll")
-    if v and addRagdoll(v) then refreshDropdown() end
-    if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.05)
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("StringValue") and obj.Name:lower():find("ragdoll") and obj.Value and obj.Value ~= "" then
-            if addRagdoll(obj.Value) then refreshDropdown() end
-            selectedRagdoll = obj.Value
-            if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(obj.Value) end
-            break
-        end
-    end
-    if char.GetAttributeChangedSignal then
-        char:GetAttributeChangedSignal("Ragdoll"):Connect(function()
-            local v = char:GetAttribute("Ragdoll")
-            if v and addRagdoll(v) then refreshDropdown() end
-            if v then selectedRagdoll = v; if DropdownRagdoll.SetValue then DropdownRagdoll:SetValue(v) end end
+ShopTab:Button({
+    Title = "Equip Selected Ragdoll",
+    Icon = "user",
+    Callback = function()
+        local toEquip = selectedRagdoll or Ragdolls[1]
+        if not toEquip or toEquip == "" then return end
+        pcall(function()
+            local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
+            if remotes and remotes:FindFirstChild("EquipRagdoll") then
+                remotes:WaitForChild("EquipRagdoll"):FireServer(toEquip)
+                WindUI:Notify({
+                    Title = "Ragdoll Equipped",
+                    Content = toEquip,
+                    Icon = "check",
+                })
+            end
         end)
     end
-end)
+})
 
-task.spawn(function()
-    while true do
-        task.wait(3)
-        local found = false
-        local folder = ReplicatedStorage:FindFirstChild("Ragdolls") or ReplicatedStorage:FindFirstChild("RagdollModels")
-        if folder then
-            for _, child in ipairs(folder:GetChildren()) do
-                if child.Name and addRagdoll(child.Name) then found = true end
-            end
-        end
-        if found then refreshDropdown() end
-    end
-end)
+ShopTab:Space()
 
-Tab2:AddButton({"Equip Selected Ragdoll", function()
-    local toEquip = selectedRagdoll or Ragdolls[1]
-    if not toEquip or toEquip == "" then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
-        if remotes and remotes:FindFirstChild("EquipRagdoll") then
-            remotes:WaitForChild("EquipRagdoll"):FireServer(toEquip)
-        else
-            warn("EquipRagdoll remote not found")
-        end
-    end)
-end})
-
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-
-local Tab2 = Tab2
-
+-- Material Dropdown
 local Materials = {}
-
-local function contains(t, v)
-    for _, x in ipairs(t) do if x == v then return true end end
-    return false
-end
-
 local function addMaterial(name)
     if not name or name == "" then return false end
     for _, v in ipairs(Materials) do if v == name then return false end end
@@ -1693,205 +600,167 @@ local function addMaterial(name)
     return true
 end
 
-local function detectCurrentMaterial()
-    local a = player:GetAttribute("Material")
-    if a and a ~= "" then return tostring(a) end
+local materialDefaults = {"Default", "Spark", "Glass"}
+for _, d in ipairs(materialDefaults) do addMaterial(d) end
 
-    if player.Character then
-        a = player.Character:GetAttribute("Material")
-        if a and a ~= "" then return tostring(a) end
+local materialFolder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
+if materialFolder then
+    for _, c in ipairs(materialFolder:GetChildren()) do
+        if c.Name and c.Name ~= "" then addMaterial(c.Name) end
     end
-
-    for _, cont in ipairs({player, player.Character}) do
-        if cont then
-            for _, obj in ipairs(cont:GetChildren()) do
-                if obj:IsA("StringValue") then
-                    local n = obj.Name:lower()
-                    if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
-                        return tostring(obj.Value)
-                    end
-                end
-            end
-        end
-    end
-
-    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-    if folder then
-        for _, child in ipairs(folder:GetChildren()) do
-            if child.Name and child.Name ~= "" then
-                addMaterial(child.Name)
-                -- optional: try match by character name (falls relevant)
-                if player.Character and player.Character.Name:lower():find(child.Name:lower()) then
-                    return child.Name
-                end
-            end
-        end
-    end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    if remotes then
-        local cur = remotes:FindFirstChild("CurrentMaterial") or remotes:FindFirstChild("GetCurrentMaterial")
-        if cur then
-            if cur:IsA("StringValue") and cur.Value and cur.Value ~= "" then
-                return tostring(cur.Value)
-            elseif cur:IsA("RemoteFunction") then
-                local ok, res = pcall(function() return cur:InvokeServer() end)
-                if ok and res and res ~= "" then return tostring(res) end
-            end
-        end
-    end
-
-    return nil
 end
 
-local function initialFill()
-    local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-    if folder then
-        for _, c in ipairs(folder:GetChildren()) do
-            if c.Name and c.Name ~= "" then addMaterial(c.Name) end
-        end
+local selectedMaterial = Materials[1] or "Default"
+
+ShopTab:Dropdown({
+    Title = "Select Material",
+    Desc = "Shows all Materials/Modifiers",
+    Values = Materials,
+    Value = selectedMaterial,
+    Callback = function(val)
+        selectedMaterial = val
     end
-    local defaults = {"Default", "Spark", "Glass"}
-    for _, d in ipairs(defaults) do addMaterial(d) end
-end
-
-initialFill()
-local detected = detectCurrentMaterial()
-if detected then addMaterial(detected) end
-
-local selectedMaterial = detected or Materials[1]
-
-local DropdownMaterial = Tab2:AddDropdown({
-    Name = "Select Material",
-    Description = "Shows all Materials/Modifiers",
-    Options = Materials,
-    Default = selectedMaterial,
-    Callback = function(val) selectedMaterial = val end
 })
 
-local function refreshDropdown()
-    if DropdownMaterial.SetOptions then
-        DropdownMaterial:SetOptions(Materials)
-    elseif DropdownMaterial.UpdateOptions then
-        DropdownMaterial:UpdateOptions(Materials)
-    else
-        if DropdownMaterial.SetValue then DropdownMaterial:SetValue(selectedMaterial or Materials[1]) end
-    end
-end
-
-player:GetAttributeChangedSignal("Material"):Connect(function()
-    local v = player:GetAttribute("Material")
-    if v and addMaterial(v) then refreshDropdown() end
-    if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
-end)
-
-player.CharacterAdded:Connect(function(char)
-    task.wait(0.05)
-    for _, obj in ipairs(char:GetChildren()) do
-        if obj:IsA("StringValue") then
-            local n = obj.Name:lower()
-            if (n:find("material") or n:find("modifier")) and obj.Value and obj.Value ~= "" then
-                if addMaterial(obj.Value) then refreshDropdown() end
-                selectedMaterial = obj.Value
-                if DropdownMaterial.SetValue then DropdownMaterial:SetValue(obj.Value) end
-                break
-            end
-        end
-    end
-    if char.GetAttributeChangedSignal then
-        char:GetAttributeChangedSignal("Material"):Connect(function()
-            local v = char:GetAttribute("Material")
-            if v and addMaterial(v) then refreshDropdown() end
-            if v then selectedMaterial = v; if DropdownMaterial.SetValue then DropdownMaterial:SetValue(v) end end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(3)
-        local found = false
-        local folder = ReplicatedStorage:FindFirstChild("Materials") or ReplicatedStorage:FindFirstChild("MaterialModifiers") or ReplicatedStorage:FindFirstChild("Modifiers")
-        if folder then
-            for _, child in ipairs(folder:GetChildren()) do
-                if child.Name and addMaterial(child.Name) then found = true end
-            end
-        end
-        if found then refreshDropdown() end
-    end
-end)
-
-Tab2:AddButton({"Equip Selected Material", function()
-    local toEquip = selectedMaterial or Materials[1]
-    if not toEquip or toEquip == "" then return end
-    pcall(function()
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
-        if remotes and remotes:FindFirstChild("SelectModifier") then
-            remotes:WaitForChild("SelectModifier"):FireServer(toEquip)
-        else
-            warn("SelectModifier remote not found")
-        end
-    end)
-end})
-
-Tab2:AddButton({"Buy All Body Parts One Time", function()
-    for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+ShopTab:Button({
+    Title = "Equip Selected Material",
+    Icon = "sparkles",
+    Callback = function()
+        local toEquip = selectedMaterial or Materials[1]
+        if not toEquip or toEquip == "" then return end
         pcall(function()
-            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+            local remotes = ReplicatedStorage:WaitForChild("Remotes", 2)
+            if remotes and remotes:FindFirstChild("SelectModifier") then
+                remotes:WaitForChild("SelectModifier"):FireServer(toEquip)
+                WindUI:Notify({
+                    Title = "Material Equipped",
+                    Content = toEquip,
+                    Icon = "check",
+                })
+            end
         end)
     end
-end})
+})
 
-Tab2:AddButton({"PurchaseNextRagdoll", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
-    end)
-end})
+ShopTab:Space()
 
-Tab2:AddButton({"RefineRagdoll", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
-    end)
-end})
+-- Shop Buttons
+ShopTab:Button({
+    Title = "Buy All Body Parts",
+    Icon = "package",
+    Callback = function()
+        for _, part in ipairs({"Head","Torso","Leg","Arm"}) do
+            pcall(function()
+                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer(part)
+            end)
+        end
+        WindUI:Notify({
+            Title = "Purchase",
+            Content = "Bought all body parts!",
+            Icon = "shopping-bag",
+        })
+    end
+})
 
-Tab2:AddButton({"Buy Head", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
-    end)
-end})
+ShopTab:Button({
+    Title = "Purchase Next Ragdoll",
+    Icon = "user-plus",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseNextRagdoll"):FireServer()
+        end)
+    end
+})
 
-Tab2:AddButton({"Buy Torso", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
-    end)
-end})
+ShopTab:Button({
+    Title = "Refine Ragdoll",
+    Icon = "wand-sparkles",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RefineRagdoll"):FireServer()
+        end)
+    end
+})
 
-Tab2:AddButton({"Buy Leg", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
-    end)
-end})
+ShopTab:Button({
+    Title = "Buy Next Pal",
+    Icon = "heart",
+    Callback = function()
+        pcall(function()
+            RollPalRemote:FireServer()
+        end)
+    end
+})
 
-Tab2:AddButton({"Buy Arm", function()
-    pcall(function()
-        ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
-    end)
-end})
+ShopTab:Space()
 
+ShopTab:Button({
+    Title = "Buy Head",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
+        end)
+    end
+})
+
+ShopTab:Button({
+    Title = "Buy Torso",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
+        end)
+    end
+})
+
+ShopTab:Button({
+    Title = "Buy Leg",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
+        end)
+    end
+})
+
+ShopTab:Button({
+    Title = "Buy Arm",
+    Callback = function()
+        pcall(function()
+            ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
+        end)
+    end
+})
+
+-- Background Tasks
+spawn(function()
+    while true do
+        if autoClaim then
+            fireRemote("ClaimQuest")
+        end
+        wait(3)
+    end
+end)
+
+spawn(function()
+    while true do
+        if autoAccept then
+            fireRemote("StartQuest")
+        end
+        wait(3)
+    end
+end)
+
+spawn(function()
+    while true do
+        if autoMastery then
+            fireMastery()
+        end
+        wait(3)
+    end
+end)
+
+-- Character Respawn Handler
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.08)
-    if currentHRP then
-        clearPhysicsExtras(currentHRP)
-    end
-    currentHRP = nil
-    if spinSpeed and spinSpeed ~= 0 then
-        task.spawn(function()
-            task.wait(5)
-            if LocalPlayer.Character == char and spinSpeed and spinSpeed ~= 0 then
-                startGlitchedFlyForCharacter(char)
-            end
-        end)
-    end
 
     local desired = isActive
     if damageConnection then
@@ -1899,6 +768,14 @@ LocalPlayer.CharacterAdded:Connect(function(char)
         damageConnection = nil
     end
     cleanupDamageObjects()
+    
+    -- Restart force movement if it was enabled
+    if forceMovement then
+        stopForceMovement()
+        task.wait(0.5)
+        startForceMovement()
+    end
+    
     if desired then
         task.spawn(function()
             task.wait(10)
@@ -1914,14 +791,15 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
+-- Cleanup on Close
 if game.BindToClose then
     pcall(function()
         game:BindToClose(function()
-            stopGlitchedFly()
             if damageConnection then
                 damageConnection:Disconnect()
                 damageConnection = nil
             end
+            stopForceMovement()
             cleanupDamageObjects()
         end)
     end)
