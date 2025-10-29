@@ -25,6 +25,7 @@ local Window = WindUI:CreateWindow({
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 
 -- Variables
@@ -59,6 +60,12 @@ local desiredGravity = 100000
 local autoClaim = false
 local autoAccept = false
 local autoMastery = false
+
+-- Performance Variables
+local render3DEnabled = true
+local originalRenderSettings = {}
+local performanceMode = false
+local lowQualityMode = false
 
 -- Helper Functions
 local function setPartVisibility(part, invisible)
@@ -231,28 +238,22 @@ local function startForceMovement()
             if humanoid and hrp then
                 local moveDir = humanoid.MoveDirection
                 
-                -- Prüfen ob Joystick bewegt wird (threshold erhöht für bessere Erkennung)
                 if moveDir.Magnitude > 0.05 then
                     if not isMovingWithJoystick then
-                        -- Joystick wurde gerade bewegt - Auto Farm pausieren
                         isMovingWithJoystick = true
                         if isActive then
                             autoFarmWasActive = true
-                            -- Damage Connection stoppen
                             if damageConnection then
                                 damageConnection:Disconnect()
                                 damageConnection = nil
                             end
-                            -- Objekte entfernen für freie Bewegung
                             cleanupDamageObjects()
                         end
                     end
                     
-                    -- Force state to allow movement
                     humanoid:ChangeState(Enum.HumanoidStateType.Physics)
                     humanoid.PlatformStand = false
                     
-                    -- Apply move direction from joystick mit höherer Geschwindigkeit
                     local currentVel = hrp.AssemblyLinearVelocity
                     hrp.AssemblyLinearVelocity = Vector3.new(
                         moveDir.X * 35,
@@ -260,10 +261,8 @@ local function startForceMovement()
                         moveDir.Z * 35
                     )
                 else
-                    -- Joystick wurde losgelassen
                     if isMovingWithJoystick then
                         isMovingWithJoystick = false
-                        -- Auto Farm wieder aktivieren wenn es vorher an war
                         if autoFarmWasActive and isActive then
                             task.spawn(function()
                                 task.wait(0.5)
@@ -287,7 +286,6 @@ local function stopForceMovement()
         forceMovementLoop = nil
     end
     
-    -- Charakter wieder aufstehen lassen
     local character = LocalPlayer.Character
     if character then
         pcall(function()
@@ -328,6 +326,174 @@ local function fireMastery()
     end
 end
 
+-- Performance Functions
+local function saveRenderSettings()
+    pcall(function()
+        local settings = UserSettings():GetService("UserGameSettings")
+        originalRenderSettings = {
+            SavedQualityLevel = settings.SavedQualityLevel,
+            GraphicsQualityLevel = settings.GraphicsQualityLevel,
+        }
+    end)
+end
+
+local function toggle3DRendering(enabled)
+    pcall(function()
+        render3DEnabled = enabled
+        RunService:Set3dRenderingEnabled(enabled)
+        
+        if not enabled then
+            WindUI:Notify({
+                Title = "3D Rendering",
+                Content = "Deaktiviert - Nur UI sichtbar",
+                Icon = "eye-off",
+            })
+        else
+            WindUI:Notify({
+                Title = "3D Rendering",
+                Content = "Aktiviert",
+                Icon = "eye",
+            })
+        end
+    end)
+end
+
+local function setLowQuality(enabled)
+    pcall(function()
+        local settings = UserSettings():GetService("UserGameSettings")
+        
+        if enabled then
+            saveRenderSettings()
+            settings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
+            settings.GraphicsQualityLevel = 1
+            
+            -- Lighting Optimierungen
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 100
+            Lighting.Brightness = 2
+            
+            WindUI:Notify({
+                Title = "Low Quality Mode",
+                Content = "Aktiviert - Maximale Performance",
+                Icon = "zap",
+            })
+        else
+            if originalRenderSettings.SavedQualityLevel then
+                settings.SavedQualityLevel = originalRenderSettings.SavedQualityLevel
+                settings.GraphicsQualityLevel = originalRenderSettings.GraphicsQualityLevel
+            end
+            
+            Lighting.GlobalShadows = true
+            Lighting.FogEnd = 100000
+            Lighting.Brightness = 1
+            
+            WindUI:Notify({
+                Title = "Low Quality Mode",
+                Content = "Deaktiviert",
+                Icon = "check",
+            })
+        end
+    end)
+end
+
+local function enablePerformanceMode(enabled)
+    pcall(function()
+        performanceMode = enabled
+        
+        if enabled then
+            -- Workspace Optimierungen
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                    obj.Enabled = false
+                end
+                
+                if obj:IsA("BasePart") then
+                    obj.Material = Enum.Material.SmoothPlastic
+                    obj.CastShadow = false
+                    obj.Reflectance = 0
+                end
+                
+                if obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj.Transparency = 1
+                end
+            end
+            
+            -- Lighting Effekte deaktivieren
+            for _, effect in pairs(Lighting:GetChildren()) do
+                if effect:IsA("PostEffect") then
+                    effect.Enabled = false
+                end
+            end
+            
+            WindUI:Notify({
+                Title = "Performance Mode",
+                Content = "Aktiviert - Alle Effekte deaktiviert",
+                Icon = "zap",
+            })
+        else
+            -- Effekte wieder aktivieren
+            for _, obj in pairs(workspace:GetDescendants()) do
+                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                    obj.Enabled = true
+                end
+                
+                if obj:IsA("BasePart") then
+                    obj.CastShadow = true
+                end
+                
+                if obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj.Transparency = 0
+                end
+            end
+            
+            for _, effect in pairs(Lighting:GetChildren()) do
+                if effect:IsA("PostEffect") then
+                    effect.Enabled = true
+                end
+            end
+            
+            WindUI:Notify({
+                Title = "Performance Mode",
+                Content = "Deaktiviert",
+                Icon = "check",
+            })
+        end
+    end)
+end
+
+local function reduceDrawDistance(enabled)
+    pcall(function()
+        if enabled then
+            workspace.StreamingMinRadius = 32
+            workspace.StreamingTargetRadius = 64
+        else
+            workspace.StreamingMinRadius = 64
+            workspace.StreamingTargetRadius = 1024
+        end
+    end)
+end
+
+local function disableAnimations(enabled)
+    pcall(function()
+        local character = LocalPlayer.Character
+        if not character then return end
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if not humanoid then return end
+        
+        local animator = humanoid:FindFirstChildOfClass("Animator")
+        if animator and enabled then
+            for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+                track:Stop()
+            end
+            animator.Parent = nil
+        elseif not enabled and not animator then
+            animator = Instance.new("Animator")
+            animator.Parent = humanoid
+        end
+    end)
+end
+
 -- Notification
 WindUI:Notify({
     Title = "Xterm Break Your Bones",
@@ -344,6 +510,11 @@ local AutoFarmTab = Window:Tab({
 local ShopTab = Window:Tab({
     Title = "Shop",
     Icon = "shopping-cart",
+})
+
+local PerformanceTab = Window:Tab({
+    Title = "Performance",
+    Icon = "gauge",
 })
 
 -- Auto Farm Tab
@@ -438,6 +609,48 @@ AutoFarmTab:Toggle({
     Default = false,
     Callback = function(v)
         autoMastery = v
+    end
+})
+
+-- Performance Tab
+PerformanceTab:Section({
+    Title = "🚀 Graphics & Performance 🚀",
+})
+
+PerformanceTab:Toggle({
+    Title = "Disable 3D Rendering",
+    Desc = "Show only UI - Max Fps",
+    Default = false,
+    Callback = function(val)
+        toggle3DRendering(not val)
+    end
+})
+
+PerformanceTab:Toggle({
+    Title = "Low Quality Mode",
+    Desc = "Reduce game quality",
+    Default = false,
+    Callback = function(val)
+        lowQualityMode = val
+        setLowQuality(val)
+    end
+})
+
+PerformanceTab:Toggle({
+    Title = "Performance Mode",
+    Desc = "Disables particles, shadows & effects",
+    Default = false,
+    Callback = function(val)
+        enablePerformanceMode(val)
+    end
+})
+
+PerformanceTab:Toggle({
+    Title = "Reduce Draw Distance",
+    Desc = "Reduces render distance for better FPS",
+    Default = false,
+    Callback = function(val)
+        reduceDrawDistance(val)
     end
 })
 
