@@ -40,6 +40,8 @@ local spawnCount = 10
 
 local forceMovement = false
 local forceMovementLoop = nil
+local autoFarmWasActive = false
+local isMovingWithJoystick = false
 
 local STRONG = {
     MIN_SPEED = 180,
@@ -227,19 +229,52 @@ local function startForceMovement()
             local hrp = character:FindFirstChild("HumanoidRootPart")
             
             if humanoid and hrp then
-                -- Force state to allow movement
-                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-                humanoid.PlatformStand = false
-                
-                -- Apply move direction from joystick
                 local moveDir = humanoid.MoveDirection
-                if moveDir.Magnitude > 0 then
+                
+                -- Prüfen ob Joystick bewegt wird (threshold erhöht für bessere Erkennung)
+                if moveDir.Magnitude > 0.05 then
+                    if not isMovingWithJoystick then
+                        -- Joystick wurde gerade bewegt - Auto Farm pausieren
+                        isMovingWithJoystick = true
+                        if isActive then
+                            autoFarmWasActive = true
+                            -- Damage Connection stoppen
+                            if damageConnection then
+                                damageConnection:Disconnect()
+                                damageConnection = nil
+                            end
+                            -- Objekte entfernen für freie Bewegung
+                            cleanupDamageObjects()
+                        end
+                    end
+                    
+                    -- Force state to allow movement
+                    humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                    humanoid.PlatformStand = false
+                    
+                    -- Apply move direction from joystick mit höherer Geschwindigkeit
                     local currentVel = hrp.AssemblyLinearVelocity
                     hrp.AssemblyLinearVelocity = Vector3.new(
-                        moveDir.X * 16,
+                        moveDir.X * 35,
                         currentVel.Y,
-                        moveDir.Z * 16
+                        moveDir.Z * 35
                     )
+                else
+                    -- Joystick wurde losgelassen
+                    if isMovingWithJoystick then
+                        isMovingWithJoystick = false
+                        -- Auto Farm wieder aktivieren wenn es vorher an war
+                        if autoFarmWasActive and isActive then
+                            task.spawn(function()
+                                task.wait(0.5)
+                                if not isMovingWithJoystick and isActive then
+                                    createDamageObjects()
+                                    ensureDamageLoop()
+                                end
+                            end)
+                            autoFarmWasActive = false
+                        end
+                    end
                 end
             end
         end)
@@ -250,6 +285,20 @@ local function stopForceMovement()
     if forceMovementLoop then
         forceMovementLoop:Disconnect()
         forceMovementLoop = nil
+    end
+    
+    -- Charakter wieder aufstehen lassen
+    local character = LocalPlayer.Character
+    if character then
+        pcall(function()
+            local humanoid = character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.PlatformStand = false
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                task.wait(0.1)
+                humanoid:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end)
     end
 end
 
@@ -354,7 +403,7 @@ AutoFarmTab:Toggle({
 
 AutoFarmTab:Toggle({
     Title = "Force Movement Control [BETA]",
-    Desc = "doesn’t work well with Autofarm but my still get you unstuck sometimes",
+    Desc = "Perfect to get unstuck from some places works with Autofarm",
     Default = false,
     Callback = function(val)
         forceMovement = val
