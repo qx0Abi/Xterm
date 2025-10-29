@@ -343,7 +343,7 @@ end
 -- Notification
 WindUI:Notify({
     Title = "Xterm Break Your Bones",
-    Content = "Script geladen!",
+    Content = "Script Loaded!",
     Icon = "check",
 })
 
@@ -459,8 +459,6 @@ AutoFarmTab:Toggle({
         autoAccept = v
     end
 })
-
-AutoFarmTab:Space()
 
 AutoFarmTab:Toggle({
     Title = "Auto Claim Mastery",
@@ -729,7 +727,6 @@ ShopTab:Space()
 
 ShopTab:Button({
     Title = "Buy Head",
-    Icon = "circle-user",
     Callback = function()
         pcall(function()
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Head")
@@ -739,7 +736,6 @@ ShopTab:Button({
 
 ShopTab:Button({
     Title = "Buy Torso",
-    Icon = "square",
     Callback = function()
         pcall(function()
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Torso")
@@ -749,7 +745,6 @@ ShopTab:Button({
 
 ShopTab:Button({
     Title = "Buy Leg",
-    Icon = "move-vertical",
     Callback = function()
         pcall(function()
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Leg")
@@ -759,7 +754,6 @@ ShopTab:Button({
 
 ShopTab:Button({
     Title = "Buy Arm",
-    Icon = "move-horizontal",
     Callback = function()
         pcall(function()
             ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PurchaseBoneUpgrade"):FireServer("Arm")
