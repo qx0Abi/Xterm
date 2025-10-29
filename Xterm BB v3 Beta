@@ -364,8 +364,6 @@ ShopTab:Toggle({
     end
 })
 
-ShopTab:Space()
-
 ShopTab:Toggle({
     Title = "Auto Buy Next Ragdoll",
     Desc = "Automatically purchases next ragdoll",
@@ -387,8 +385,6 @@ ShopTab:Toggle({
         end
     end
 })
-
-ShopTab:Space()
 
 -- Auto Buy Next Pal
 local RollPalRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RollPal")
