@@ -413,8 +413,6 @@ AutoFarmTab:Toggle({
     end
 })
 
-AutoFarmTab:Space()
-
 AutoFarmTab:Slider({
     Title = "Strength Auto Farm V2",
     Desc = "Amount of damage objects",
