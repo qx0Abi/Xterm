@@ -36,7 +36,7 @@ local autoBuyRagdollTask = nil
 local isActive = false
 local damageObjects = {}
 local damageConnection = nil
-local spawnCount = 20
+local spawnCount = 10
 
 local STRONG = {
     MIN_SPEED = 180,
