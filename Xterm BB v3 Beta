@@ -392,8 +392,8 @@ AutoFarmTab:Slider({
 AutoFarmTab:Space()
 
 AutoFarmTab:Toggle({
-    Title = "Heavy Boi",
-    Desc = "Insanely High Gravity (Auto Farm Bypass)",
+    Title = "Make yourself Heavy",
+    Desc = "Insanely High Gravity",
     Default = false,
     Callback = function(val)
         gravityOn = val
