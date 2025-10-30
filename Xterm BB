@@ -374,7 +374,7 @@ local function setLowQuality(enabled)
             
             WindUI:Notify({
                 Title = "Low Quality Mode",
-                Content = "Enabled - Maximum performance",
+                Content = "Enabled",
                 Icon = "zap",
             })
         else
