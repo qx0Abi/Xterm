@@ -1,14 +1,14 @@
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
 local Window = WindUI:CreateWindow({
-    Title = "Xterm Break Bones v3.1",
-    Icon = "skull",
+    Title = "Xterm Break Bones",
+    Icon = "x",
     Author = "by qx0_",
     Folder = "Xterm_WindUI",
     
     OpenButton = {
-        Title = "Xterm 3.1",
-        Icon = "bone",
+        Title = "Xterm v3.1",
+        Icon = "",
         CornerRadius = UDim.new(0, 16),
         StrokeThickness = 2,
         Color = ColorSequence.new(
@@ -20,6 +20,15 @@ local Window = WindUI:CreateWindow({
         OnlyMobile = false,
     }
 })
+
+-- */  Tags  /* --
+do
+    Window:Tag({
+        Title = "v3.1",
+        Icon = "rocket",
+        Color = Color3.fromHex("#ea0c0c")
+    })
+end
 
 -- Services
 local Players = game:GetService("Players")
