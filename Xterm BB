@@ -5,9 +5,12 @@ local Window = WindUI:CreateWindow({
     Icon = "x",
     Author = "by qx0_",
     Folder = "Xterm_WindUI",
+    Background = "rbxassetid://71675932420310",
+    BackgroundImageTransparency = 0.80,
+
     
     OpenButton = {
-        Title = "Xterm v3.1",
+        Title = "Xterm v3.1.1",
         Icon = "",
         CornerRadius = UDim.new(0, 16),
         StrokeThickness = 2,
@@ -24,7 +27,7 @@ local Window = WindUI:CreateWindow({
 -- */  Tags  /* --
 do
     Window:Tag({
-        Title = "v3.1",
+        Title = "v3.1.1",
         Icon = "rocket",
         Color = Color3.fromHex("#ea0c0c")
     })
@@ -36,6 +39,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
 
 -- Variables
 local autoBuy = false
@@ -52,6 +56,8 @@ local forceMovement = false
 local forceMovementLoop = nil
 local autoFarmWasActive = false
 local isMovingWithJoystick = false
+
+local infiniteJumpEnabled = false
 
 local STRONG = {
     MIN_SPEED = 180,
@@ -569,7 +575,9 @@ AutoFarmTab:Slider({
     end
 })
 
-AutoFarmTab:Space()
+local Section = AutoFarmTab:Section({ 
+    Title = "Special",
+})
 
 AutoFarmTab:Toggle({
     Title = "Make yourself Heavy",
@@ -595,7 +603,18 @@ AutoFarmTab:Toggle({
     end
 })
 
-AutoFarmTab:Space()
+AutoFarmTab:Toggle({
+    Title = "Infinite Jump",
+    Desc = "Jump infinitely in the air - even while ragdolled",
+    Default = false,
+    Callback = function(state)
+        infiniteJumpEnabled = state
+    end
+})
+
+local Section = AutoFarmTab:Section({ 
+    Title = "Quest Stuff",
+})
 
 AutoFarmTab:Toggle({
     Title = "Auto Claim Quest",
@@ -864,7 +883,9 @@ ShopTab:Button({
     end
 })
 
-ShopTab:Space()
+local Section = ShopTab:Section({ 
+    Title = "Single Buy",
+})
 
 -- Shop Buttons
 ShopTab:Button({
@@ -914,7 +935,9 @@ ShopTab:Button({
     end
 })
 
-ShopTab:Space()
+local Section = ShopTab:Section({ 
+    Title = "Single Buy Body",
+})
 
 ShopTab:Button({
     Title = "Buy Head",
@@ -1010,6 +1033,40 @@ LocalPlayer.CharacterAdded:Connect(function(char)
                 ensureDamageLoop()
             end
         end)
+    end
+end)
+
+    -- Infjump handler
+
+UserInputService.JumpRequest:Connect(function()
+    if infiniteJumpEnabled then
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChild("Humanoid")
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            
+            if humanoid and hrp then
+                -- Prüfe ob Character am Boden ist oder fällt/rollt
+                local currentState = humanoid:GetState()
+                
+                -- Wenn ragdolled/physics mode, gib einen Upward Impulse
+                if currentState == Enum.HumanoidStateType.Physics or 
+                   currentState == Enum.HumanoidStateType.FallingDown or 
+                   currentState == Enum.HumanoidStateType.Ragdoll then
+                    
+                    -- Behalte aktuelle Velocity und füge nur Y-Komponente hinzu
+                    local currentVel = hrp.AssemblyLinearVelocity
+                    hrp.AssemblyLinearVelocity = Vector3.new(
+                        currentVel.X,
+                        50,  -- Jump Power
+                        currentVel.Z
+                    )
+                else
+                    -- Normal jump wenn nicht ragdolled
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
+            end
+        end
     end
 end)
 
