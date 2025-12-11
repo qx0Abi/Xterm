@@ -1,54 +1,79 @@
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 
+-- Window Configuration
 local Window = WindUI:CreateWindow({
-    Title = "Testing script | Forge",
-    Icon = "pickaxe",
-    Author = "by qx0_",
-    Folder = "Universal_WindUI",
+    Title = "Wonka Hub",
+    Author = "By qx0_",
+    Folder = "WonkaHub",
+    Icon = "hammer",
+    IconSize = 28,
+    NewElements = true,
+    Size = UDim2.fromOffset(700, 700),
+    HideSearchBar = true,
     Background = "rbxassetid://71675932420310",
-    BackgroundImageTransparency = 0.80,
-
+    Transparent = true,
+    Theme = "Midnight",
     
     OpenButton = {
-        Title = "Billys Special | Forge",
-        Icon = "",
-        CornerRadius = UDim.new(0, 16),
-        StrokeThickness = 2,
-        Color = ColorSequence.new(
-            Color3.fromHex("00D9FF"),
-            Color3.fromHex("7B2FFF")
-        ),
+        Title = "Open Wonka Hub",
+        Icon = "hammer",
+        CornerRadius = UDim.new(1, 0),
+        StrokeThickness = 3,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 90, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 60, 255))
+        }),
         Enabled = true,
         Draggable = true,
         OnlyMobile = false,
+    },
+    
+    Topbar = {
+        Height = 35,
+        ButtonsType = "Default",
     }
 })
 
--- Tag
-do
-    Window:Tag({
-        Title = "v1.5",
-        Icon = "star",
-        Color = Color3.fromHex("#00D9FF")
-    })
-end
+-- Version Tag
+Window:Tag({
+    Title = "v2.5",
+    Icon = "star",
+    Color = Color3.fromRGB(170, 90, 255)
+})
+
+-- Color Palette
+local Colors = {
+    Purple = Color3.fromRGB(170, 90, 255),
+    DarkPurple = Color3.fromRGB(120, 60, 255),
+    Yellow = Color3.fromRGB(236, 162, 1),
+    Green = Color3.fromRGB(16, 197, 80),
+    Grey = Color3.fromRGB(131, 136, 158),
+    Blue = Color3.fromRGB(37, 122, 247),
+    Red = Color3.fromRGB(239, 79, 29),
+    Cyan = Color3.fromRGB(0, 217, 255),
+    Orange = Color3.fromRGB(255, 140, 0),
+}
 
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 -- Variables
-local originalWalkSpeed = 16
-local originalJumpPower = 50
 local infiniteJumpEnabled = false
 local noClipEnabled = false
 local espEnabled = false
 local loopTpEnabled = false
 local loopTpTarget = nil
+
+-- Freecam Variables
+local freecamEnabled = false
+local freecamTarget = nil
+local freecamConnection = nil
+local originalCamera = nil
 
 -- Forge Variables
 local ex1Value = 0
@@ -56,12 +81,11 @@ local ex2Value = 1
 
 -- Performance Variables
 local render3DEnabled = true
-local originalRenderSettings = {}
 local performanceMode = false
 local lowQualityMode = false
 
--- Teleport Settings Variables
-local teleportMethod = "Instant" -- "Instant" or "Tween"
+-- Teleport Settings
+local teleportMethod = "Instant"
 local tweenSpeed = 50
 local isTweening = false
 local tempNoClipEnabled = false
@@ -84,72 +108,89 @@ local function getRootPart()
     return char and char:FindFirstChild("HumanoidRootPart")
 end
 
--- Performance Functions
-local function saveRenderSettings()
+-- Forge Functions
+local function updateGoldDisplay(value)
     pcall(function()
-        local settings = UserSettings():GetService("UserGameSettings")
-        originalRenderSettings = {
-            SavedQualityLevel = settings.SavedQualityLevel,
-            GraphicsQualityLevel = settings.GraphicsQualityLevel,
-        }
+        local gold = LocalPlayer:WaitForChild("PlayerGui")
+                        :WaitForChild("Main")
+                        .Screen:WaitForChild("Hud")
+                        :WaitForChild("Gold")
+        
+        local label = gold:IsA("TextLabel") and gold
+                    or gold:FindFirstChild("Text")
+                    or gold:FindFirstChild("text")
+        
+        if label then
+            local formatted = tostring(value):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+            label.Text = "$" .. formatted
+            WindUI:Notify({
+                Title = "Exploit",
+                Content = "" .. formatted,
+                Icon = "bug",
+            })
+        end
     end)
 end
 
+local function updateLevelDisplay(value)
+    pcall(function()
+        local level = LocalPlayer:WaitForChild("PlayerGui")
+                         :WaitForChild("Main")
+                         .Screen:WaitForChild("Hud")
+                         :WaitForChild("Level")
+        
+        local lvlLabel = level:IsA("TextLabel") and level
+                       or level:FindFirstChild("Text")
+                       or level:FindFirstChild("text")
+        
+        if lvlLabel then
+            lvlLabel.Text = "Level " .. tostring(value)
+            WindUI:Notify({
+                Title = "Exploit",
+                Content = "" .. tostring(value),
+                Icon = "bug",
+            })
+        end
+    end)
+end
+
+-- Performance Functions
 local function toggle3DRendering(enabled)
     pcall(function()
         render3DEnabled = enabled
         RunService:Set3dRenderingEnabled(enabled)
         
-        if not enabled then
-            WindUI:Notify({
-                Title = "3D Rendering",
-                Content = "Disabled - Only UI visible",
-                Icon = "eye-off",
-            })
-        else
-            WindUI:Notify({
-                Title = "3D Rendering",
-                Content = "Enabled",
-                Icon = "eye",
-            })
-        end
+        WindUI:Notify({
+            Title = "3D Rendering",
+            Content = enabled and "Enabled" or "Disabled - UI Only",
+            Icon = enabled and "eye" or "eye-off",
+        })
     end)
 end
 
 local function setLowQuality(enabled)
     pcall(function()
         local settings = UserSettings():GetService("UserGameSettings")
+        local Lighting = game:GetService("Lighting")
         
         if enabled then
-            saveRenderSettings()
             settings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
             settings.GraphicsQualityLevel = 1
-            
             Lighting.GlobalShadows = false
             Lighting.FogEnd = 100
             Lighting.Brightness = 2
-            
-            WindUI:Notify({
-                Title = "Low Quality Mode",
-                Content = "Enabled",
-                Icon = "zap",
-            })
         else
-            if originalRenderSettings.SavedQualityLevel then
-                settings.SavedQualityLevel = originalRenderSettings.SavedQualityLevel
-                settings.GraphicsQualityLevel = originalRenderSettings.GraphicsQualityLevel
-            end
-            
+            settings.SavedQualityLevel = Enum.SavedQualitySetting.Automatic
             Lighting.GlobalShadows = true
             Lighting.FogEnd = 100000
             Lighting.Brightness = 1
-            
-            WindUI:Notify({
-                Title = "Low Quality Mode",
-                Content = "Disabled",
-                Icon = "check",
-            })
         end
+        
+        WindUI:Notify({
+            Title = "Low Quality Mode",
+            Content = enabled and "Enabled" or "Disabled",
+            Icon = "zap",
+        })
     end)
 end
 
@@ -157,61 +198,29 @@ local function enablePerformanceMode(enabled)
     pcall(function()
         performanceMode = enabled
         
-        if enabled then
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-                    obj.Enabled = false
-                end
-                
-                if obj:IsA("BasePart") then
-                    obj.Material = Enum.Material.SmoothPlastic
-                    obj.CastShadow = false
-                    obj.Reflectance = 0
-                end
-                
-                if obj:IsA("Decal") or obj:IsA("Texture") then
-                    obj.Transparency = 1
-                end
+        for _, obj in pairs(Workspace:GetDescendants()) do
+            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+                obj.Enabled = not enabled
             end
             
-            for _, effect in pairs(Lighting:GetChildren()) do
-                if effect:IsA("PostEffect") then
-                    effect.Enabled = false
-                end
+            if enabled and obj:IsA("BasePart") then
+                obj.Material = Enum.Material.SmoothPlastic
+                obj.CastShadow = false
+                obj.Reflectance = 0
+            elseif obj:IsA("BasePart") then
+                obj.CastShadow = true
             end
             
-            WindUI:Notify({
-                Title = "Performance Mode",
-                Content = "Enabled - All effects disabled",
-                Icon = "zap",
-            })
-        else
-            for _, obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
-                    obj.Enabled = true
-                end
-                
-                if obj:IsA("BasePart") then
-                    obj.CastShadow = true
-                end
-                
-                if obj:IsA("Decal") or obj:IsA("Texture") then
-                    obj.Transparency = 0
-                end
+            if obj:IsA("Decal") or obj:IsA("Texture") then
+                obj.Transparency = enabled and 1 or 0
             end
-            
-            for _, effect in pairs(Lighting:GetChildren()) do
-                if effect:IsA("PostEffect") then
-                    effect.Enabled = true
-                end
-            end
-            
-            WindUI:Notify({
-                Title = "Performance Mode",
-                Content = "Disabled",
-                Icon = "check",
-            })
         end
+        
+        WindUI:Notify({
+            Title = "Performance Mode",
+            Content = enabled and "All effects disabled" or "Enabled",
+            Icon = "zap",
+        })
     end)
 end
 
@@ -250,7 +259,7 @@ local function createESP(player)
         textLabel.Size = UDim2.new(1, 0, 1, 0)
         textLabel.BackgroundTransparency = 1
         textLabel.Text = player.Name
-        textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textLabel.TextColor3 = Color3.fromRGB(170, 90, 255)
         textLabel.TextStrokeTransparency = 0.5
         textLabel.TextScaled = true
         textLabel.Parent = billboardGui
@@ -258,7 +267,7 @@ local function createESP(player)
         local highlight = Instance.new("Highlight")
         highlight.Name = "ESP_Highlight"
         highlight.Adornee = char
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.FillColor = Color3.fromRGB(170, 90, 255)
         highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0
@@ -291,17 +300,6 @@ local function toggleESP(enabled)
                 createESP(player)
             end
         end
-        
-        Players.PlayerAdded:Connect(function(player)
-            if espEnabled then
-                player.CharacterAdded:Connect(function()
-                    wait(0.5)
-                    if espEnabled then
-                        createESP(player)
-                    end
-                end)
-            end
-        end)
     else
         for _, player in pairs(Players:GetPlayers()) do
             removeESP(player)
@@ -336,13 +334,13 @@ local function toggleNoClip(enabled)
     end
 end
 
--- Teleport Function with Instant/Tween
+-- Teleport Function
 local function teleportTo(targetCFrame, callback)
     local hrp = getRootPart()
     if not hrp then 
         WindUI:Notify({
             Title = "Error",
-            Content = "HumanoidRootPart not found",
+            Content = "Character not found",
             Icon = "alert-circle",
         })
         return 
@@ -363,7 +361,6 @@ local function teleportTo(targetCFrame, callback)
         
         isTweening = true
         
-        -- Enable temporary NoClip if not already enabled
         if not noClipEnabled then
             tempNoClipEnabled = true
             toggleNoClip(true)
@@ -383,7 +380,6 @@ local function teleportTo(targetCFrame, callback)
         tween.Completed:Connect(function()
             isTweening = false
             
-            -- Disable temporary NoClip if it was enabled by us
             if tempNoClipEnabled then
                 tempNoClipEnabled = false
                 toggleNoClip(false)
@@ -396,7 +392,7 @@ local function teleportTo(targetCFrame, callback)
         
         WindUI:Notify({
             Title = "Teleporting",
-            Content = string.format("Distance: %.0f studs (~%.1fs)", distance, tweenTime),
+            Content = string.format("%.0f studs (~%.1fs)", distance, tweenTime),
             Icon = "navigation",
         })
     end
@@ -430,42 +426,55 @@ local function stopLoopTp()
     end
 end
 
--- Anti-AFK
-local antiAFKEnabled = false
-local antiAFKConnection = nil
-
-local function toggleAntiAFK(enabled)
-    antiAFKEnabled = enabled
+-- Freecam Functions
+local function startFreecam()
+    if freecamConnection then return end
     
-    if enabled then
-        local VirtualUser = game:GetService("VirtualUser")
-        antiAFKConnection = LocalPlayer.Idled:Connect(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
-        
-        WindUI:Notify({
-            Title = "Anti-AFK",
-            Content = "Enabled",
-            Icon = "coffee",
-        })
-    else
-        if antiAFKConnection then
-            antiAFKConnection:Disconnect()
-            antiAFKConnection = nil
+    local camera = Workspace.CurrentCamera
+    originalCamera = camera.CameraType
+    camera.CameraType = Enum.CameraType.Scriptable
+    
+    freecamConnection = RunService.RenderStepped:Connect(function()
+        if not freecamEnabled or not freecamTarget then 
+            return 
         end
         
-        WindUI:Notify({
-            Title = "Anti-AFK",
-            Content = "Disabled",
-            Icon = "x",
-        })
+        local targetPlayer = Players:FindFirstChild(freecamTarget)
+        if targetPlayer and targetPlayer.Character then
+            local targetHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local targetHead = targetPlayer.Character:FindFirstChild("Head")
+            
+            if targetHRP and targetHead then
+                -- Position camera behind and above the target
+                local offset = Vector3.new(0, 8, 12)
+                local targetPos = targetHead.Position
+                local lookVector = targetHRP.CFrame.LookVector
+                
+                camera.CFrame = CFrame.new(targetPos - lookVector * offset.Z + Vector3.new(0, offset.Y, 0), targetPos)
+            end
+        end
+    end)
+end
+
+local function stopFreecam()
+    if freecamConnection then
+        freecamConnection:Disconnect()
+        freecamConnection = nil
     end
+    
+    local camera = Workspace.CurrentCamera
+    if originalCamera then
+        camera.CameraType = originalCamera
+        originalCamera = nil
+    else
+        camera.CameraType = Enum.CameraType.Custom
+    end
+    
+    -- Reset camera to player
+    camera.CameraSubject = getCharacter() and getCharacter():FindFirstChild("Humanoid")
 end
 
 -- FOV Changer
-local defaultFOV = 70
-
 local function setFOV(value)
     pcall(function()
         local camera = Workspace.CurrentCamera
@@ -477,158 +486,236 @@ end
 
 -- Notification
 WindUI:Notify({
-    Title = "Billy’s test Script",
-    Content = "Script Loaded Successfully!",
-    Icon = "check",
+    Title = "Wonka Hub Loaded",
+    Content = "Welcome!",
+    Icon = "check-circle",
 })
 
--- Tabs
-local ForgeTab = Window:Tab({
-    Title = "Forge",
-    Icon = "pickaxe",
+-- ========================================
+-- 📦 CREATE SECTIONS
+-- ========================================
+local ForgeSection = Window:Section({
+    Title = "⚒️ The Forge",
 })
 
-local PlayerTab = Window:Tab({
-    Title = "Player",
-    Icon = "user",
+local PlayerSection = Window:Section({
+    Title = "🎮 Player Controls",
 })
 
-local TeleportTab = Window:Tab({
-    Title = "Teleport",
-    Icon = "map-pin",
+local TeleportSection = Window:Section({
+    Title = "📍 Teleportation",
 })
 
-local VisualsTab = Window:Tab({
-    Title = "Visuals",
-    Icon = "eye",
+local VisualsSection = Window:Section({
+    Title = "👁️ Visuals & ESP",
 })
 
-local MiscTab = Window:Tab({
-    Title = "Misc",
-    Icon = "settings",
+local PerformanceSection = Window:Section({
+    Title = "⚡ Performance",
 })
 
-local PerformanceTab = Window:Tab({
-    Title = "Performance",
-    Icon = "gauge",
+local MiscSection = Window:Section({
+    Title = "🔧 Utilities",
 })
 
-local SettingsTab = Window:Tab({
-    Title = "Settings",
-    Icon = "sliders",
+-- ========================================
+-- ⚒️ FORGE TAB
+-- ========================================
+local ForgeTab = ForgeSection:Tab({
+    Title = "The Forge",
+    Icon = "hammer",
+    IconColor = Colors.Orange,
+    IconShape = "Square",
 })
 
--- Forge Tab
 ForgeTab:Section({
-    Title = "⚒️ Forge Controls ⚒️",
+    Title = "The Forge",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
-ForgeTab:Button({
-    Title = "ex1",
-    Icon = "bug",
-    Callback = function()
-        updateGoldDisplay(ex1Value)
-    end
+local TFM = ForgeTab:Group({})
+
+local ForgeTab = ForgeSection:Tab({
+    Title = "Forge Exploits",
+    Icon = "hammer",
+    IconColor = Colors.Orange,
+    IconShape = "Square",
 })
 
-ForgeTab:Slider({
-    Title = "ex1",
-    Desc = "Value",
-    Step = 1,
-    Value = {
-        Min = 0,
-        Max = 10,
-        Default = 0,
-    },
-    Callback = function(val)
-        ex1Value = val
-    end
+ForgeTab:Section({
+    Title = "Exploit Value",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
+
+local ForgeTab = ForgeSection:Tab({
+    Title = "The Forge Teleport",
+    Icon = "hammer",
+    IconColor = Colors.Orange,
+    IconShape = "Square",
+})
+
+ForgeTab:Section({
+    Title = "World 2 Locations",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local TFGroup = ForgeTab:Group({})
+
+local locations = {
+    {Title = "Spawn", Icon = "home", CFrame = CFrame.new(0, 50, 0), Color = Colors.Grey},
+    {Title = "The Forge", Icon = "hammer", CFrame = CFrame.new(13.35, 24.36, -69.49), Color = Colors.Orange},
+    {Title = "Item Seller", Icon = "shopping-cart", CFrame = CFrame.new(-138.61, 21.61, -26.37), Color = Colors.Green},
+    {Title = "Enchanter", Icon = "sparkles", CFrame = CFrame.new(21.76, 21.86, -126.00), Color = Colors.Purple},
+    {Title = "Runemaker", Icon = "book", CFrame = CFrame.new(-55.48, 21.76, -141.15), Color = Colors.Blue},
+    {Title = "Mine", Icon = "pickaxe", CFrame = CFrame.new(202.43, 75.00, -203.33), Color = Colors.Yellow},
+    {Title = "Volcano Start", Icon = "flame", CFrame = CFrame.new(351.68, 89.53, 72.32), Color = Colors.Red},
+    {Title = "Update Gate", Icon = "door-open", CFrame = CFrame.new(405.98, 49.04, 290.94), Color = Colors.Cyan},
+    {Title = "Demonic Pick", Icon = "skull", CFrame = CFrame.new(647.18, 53.84, 270.52), Color = Colors.Red},
+}
+
+for i, loc in ipairs(locations) do
+    local TFGroup = ForgeTab:Group({})
+    
+    TFGroup:Button({
+        Title = loc.Title,
+        Icon = loc.Icon,
+        Justify = "Center",
+        Color = loc.Color,
+        Callback = function()
+            teleportTo(loc.CFrame, function()
+                WindUI:Notify({
+                    Title = "Teleported",
+                    Content = "To " .. loc.Title,
+                    Icon = loc.Icon,
+                })
+            end)
+        end
+    })
+    
+    if i ~= #locations then
+        ForgeTab:Space()
+    end
+end
 
 ForgeTab:Space()
 
-ForgeTab:Button({
-    Title = "ex2",
-    Icon = "bug",
-    Callback = function()
-        updateLevelDisplay(ex2Value)
-    end
+-- ========================================
+-- 🎮 PLAYER TAB
+-- ========================================
+local PlayerTab = PlayerSection:Tab({
+    Title = "Player",
+    Icon = "user",
+    IconColor = Colors.Green,
+    IconShape = "Square",
 })
 
-ForgeTab:Slider({
-    Title = "ex2",
-    Desc = "Value",
-    Step = 1,
-    Value = {
-        Min = 1,
-        Max = 10,
-        Default = 1,
-    },
-    Callback = function(val)
-        ex2Value = val
-    end
-})
-
--- Player Tab
 PlayerTab:Section({
-    Title = "🏃 Movement 🏃",
+    Title = "🏃 Movement Speed",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
-PlayerTab:Slider({
+PlayerTab:Input({
     Title = "Walk Speed",
-    Desc = "Change your walking speed",
-    Step = 1,
-    Value = {
-        Min = 16,
-        Max = 500,
-        Default = 16,
-    },
-    Callback = function(val)
-        local humanoid = getHumanoid()
-        if humanoid then
-            humanoid.WalkSpeed = val
+    Value = "16",
+    InputIcon = "gauge",
+    Type = "Input",
+    Placeholder = "16 - 500",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 16 and num <= 500 then
+            local humanoid = getHumanoid()
+            if humanoid then
+                humanoid.WalkSpeed = num
+                WindUI:Notify({
+                    Title = "Walk Speed",
+                    Content = "Set to " .. num,
+                    Icon = "check",
+                })
+            end
         end
-    end
+    end,
 })
 
-PlayerTab:Slider({
+PlayerTab:Space()
+
+PlayerTab:Input({
     Title = "Jump Power",
-    Desc = "Change your jump height",
-    Step = 1,
-    Value = {
-        Min = 50,
-        Max = 500,
-        Default = 50,
-    },
-    Callback = function(val)
-        local humanoid = getHumanoid()
-        if humanoid then
-            humanoid.JumpPower = val
+    Value = "50",
+    InputIcon = "arrow-up",
+    Type = "Input",
+    Placeholder = "50 - 500",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 50 and num <= 500 then
+            local humanoid = getHumanoid()
+            if humanoid then
+                humanoid.JumpPower = num
+                WindUI:Notify({
+                    Title = "Jump Power",
+                    Content = "Set to " .. num,
+                    Icon = "check",
+                })
+            end
         end
-    end
+    end,
 })
 
-PlayerTab:Toggle({
+PlayerTab:Space()
+
+PlayerTab:Section({
+    Title = "✨ Movement Features",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local MovementGroup = PlayerTab:Group({})
+
+MovementGroup:Toggle({
     Title = "Infinite Jump",
     Desc = "Jump infinitely in the air",
-    Default = false,
     Callback = function(state)
         infiniteJumpEnabled = state
+        WindUI:Notify({
+            Title = "Infinite Jump",
+            Content = state and "Enabled" or "Disabled",
+            Icon = state and "check" or "x",
+        })
     end
 })
 
-PlayerTab:Toggle({
+MovementGroup:Space()
+
+MovementGroup:Toggle({
     Title = "NoClip",
-    Desc = "Walk through walls",
-    Default = false,
+    Desc = "Walk through walls and objects",
     Callback = function(state)
         toggleNoClip(state)
+        WindUI:Notify({
+            Title = "NoClip",
+            Content = state and "Enabled" or "Disabled",
+            Icon = state and "check" or "x",
+        })
     end
 })
 
--- Teleport Tab
+-- ========================================
+-- 📍 TELEPORT TAB
+-- ========================================
+local TeleportTab = TeleportSection:Tab({
+    Title = "Teleport",
+    Icon = "map-pin",
+    IconColor = Colors.Blue,
+    IconShape = "Square",
+})
+
 TeleportTab:Section({
-    Title = "📍 Player Teleport 📍",
+    Title = "👥 Player Teleportation",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
 local playerNames = {}
@@ -646,7 +733,9 @@ end
 
 updatePlayerList()
 
-TeleportTab:Dropdown({
+local PlayerTpGroup = TeleportTab:Group({})
+
+local AllPlayersDropdown = PlayerTpGroup:Dropdown({
     Title = "Select Player",
     Desc = "Choose a player to teleport to",
     Values = playerNames,
@@ -657,22 +746,33 @@ TeleportTab:Dropdown({
     end
 })
 
-TeleportTab:Button({
+PlayerTpGroup:Space()
+
+PlayerTpGroup:Button({
     Title = "Refresh Player List",
     Icon = "refresh-cw",
+    Justify = "Center",
+    Color = Colors.Grey,
     Callback = function()
         playerNames = updatePlayerList()
+        AllPlayersDropdown:Refresh(playerNames)
         WindUI:Notify({
             Title = "Player List",
-            Content = "Updated successfully",
+            Content = "Refreshed successfully",
             Icon = "check",
         })
     end
 })
 
-TeleportTab:Button({
+TeleportTab:Space()
+
+local TpActionsGroup = TeleportTab:Group({})
+
+TpActionsGroup:Button({
     Title = "Teleport to Player",
     Icon = "send",
+    Justify = "Center",
+    Color = Colors.Blue,
     Callback = function()
         if not selectedPlayer then
             WindUI:Notify({
@@ -700,16 +800,27 @@ TeleportTab:Button({
     end
 })
 
-TeleportTab:Toggle({
-    Title = "Loop Teleport to Player",
+TpActionsGroup:Space()
+
+TpActionsGroup:Toggle({
+    Title = "Loop Teleport",
     Desc = "Continuously teleport to selected player",
-    Default = false,
     Callback = function(state)
         loopTpEnabled = state
         if state then
             startLoopTp()
+            WindUI:Notify({
+                Title = "Loop Teleport",
+                Content = "Enabled for " .. (selectedPlayer or "no player"),
+                Icon = "repeat",
+            })
         else
             stopLoopTp()
+            WindUI:Notify({
+                Title = "Loop Teleport",
+                Content = "Disabled",
+                Icon = "x",
+            })
         end
     end
 })
@@ -717,523 +828,294 @@ TeleportTab:Toggle({
 TeleportTab:Space()
 
 TeleportTab:Section({
-    Title = "🗺️ Quick Teleports 🗺️",
+    Title = "📹 Freecam Spectate",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
-TeleportTab:Button({
-    Title = "Teleport to Spawn",
-    Icon = "home",
-    Callback = function()
-        local spawnLocation = Workspace:FindFirstChild("SpawnLocation")
-        local targetCFrame
-        
-        if spawnLocation then
-            targetCFrame = spawnLocation.CFrame + Vector3.new(0, 5, 0)
-        else
-            targetCFrame = CFrame.new(0, 50, 0)
-        end
-        
-        teleportTo(targetCFrame)
-    end
-})
+local FreecamGroup = TeleportTab:Group({})
 
-TeleportTab:Button({
-    Title = "Forge World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(13.35, 24.36, -69.49)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Forge",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Sell items World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(-138.61, 21.61, -26.37)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The item Seller",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Enchanter World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(21.76, 21.86, -126.00)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Enchanter",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Runemaker World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(-55.48, 21.76, -141.15)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Runemaker",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "mine World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(202.43, 75.00, -203.33)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The mine",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Volcan area start World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(351.68, 89.53, 72.32)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Volcan area start",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Volcan Update Gate? World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(405.98, 49.04, 290.94)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Update Gate?",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Demonic pick World-2 [The Forge]",
-    Icon = "hammer",
-    Callback = function()
-        local targetCFrame = CFrame.new(647.18, 53.84, 270.52)
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleported",
-                Content = "To The Demonic pick",
-                Icon = "hammer",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Teleport Up (+100)",
-    Icon = "arrow-up-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if hrp then
-            teleportTo(hrp.CFrame + Vector3.new(0, 100, 0))
-        end
-    end
-})
-
-TeleportTab:Button({
-    Title = "Teleport Up (+10)",
-    Icon = "arrow-up-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if hrp then
-            teleportTo(hrp.CFrame + Vector3.new(0, 10, 0))
-        end
-    end
-})
-
-TeleportTab:Button({
-    Title = "Teleport Down (-100)",
-    Icon = "arrow-down-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if hrp then
-            teleportTo(hrp.CFrame - Vector3.new(0, 100, 0))
-        end
-    end
-})
-
-TeleportTab:Button({
-    Title = "Teleport Down (-10)",
-    Icon = "arrow-down-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if hrp then
-            teleportTo(hrp.CFrame - Vector3.new(0, 10, 0))
-        end
-    end
-})
-
-TeleportTab:Button({
-    Title = "Forward (+50)",
-    Icon = "arrow-up-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if not hrp then return end
-
-        local forward = hrp.CFrame.LookVector * 50
-        local targetCFrame = hrp.CFrame + forward
-
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleport",
-                Content = "50 Studs forward",
-                Icon = "arrow-up-circle",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Forward (+10)",
-    Icon = "arrow-up-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if not hrp then return end
-
-        local forward = hrp.CFrame.LookVector * 10
-        local targetCFrame = hrp.CFrame + forward
-
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleport",
-                Content = "10 Studs forward",
-                Icon = "arrow-up-circle",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Backward (‑50)",
-    Icon = "arrow-down-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if not hrp then return end
-
-        local backward = -hrp.CFrame.LookVector * 50
-        local targetCFrame = hrp.CFrame + backward
-
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleport",
-                Content = "50 Studs Backward",
-                Icon = "arrow-down-circle",
-            })
-        end)
-    end
-})
-
-TeleportTab:Button({
-    Title = "Backward (‑10)",
-    Icon = "arrow-down-circle",
-    Callback = function()
-        local hrp = getRootPart()
-        if not hrp then return end
-
-        local backward = -hrp.CFrame.LookVector * 10
-        local targetCFrame = hrp.CFrame + backward
-
-        teleportTo(targetCFrame, function()
-            WindUI:Notify({
-                Title = "Teleport",
-                Content = "10 Studs Backward",
-                Icon = "arrow-down-circle",
-            })
-        end)
-    end
-})
-
-VisualsTab:Space()
-
-VisualsTab:Section({
-    Title = "📷 Camera Settings 📷",
-})
-
-VisualsTab:Slider({
-    Title = "Field of View (FOV)",
-    Desc = "Change camera FOV",
-    Step = 1,
-    Value = {
-        Min = 70,
-        Max = 120,
-        Default = 70,
-    },
+local FreecamDropdown = FreecamGroup:Dropdown({
+    Title = "Select Player to Spectate",
+    Desc = "Choose a player to follow with freecam",
+    Values = playerNames,
+    Value = playerNames[1],
     Callback = function(val)
-        setFOV(val)
-    end
-})
-
-VisualsTab:Space()
-
-VisualsTab:Section({
-    Title = "🌟 Environment 🌟",
-})
-
-VisualsTab:Toggle({
-    Title = "FullBright",
-    Desc = "Maximum brightness",
-    Default = false,
-    Callback = function(state)
-        if state then
-            Lighting.Brightness = 2
-            Lighting.ClockTime = 14
-            Lighting.FogEnd = 100000
-            Lighting.GlobalShadows = false
-            Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-        else
-            Lighting.Brightness = 1
-            Lighting.GlobalShadows = true
-            Lighting.OutdoorAmbient = Color3.fromRGB(70, 70, 70)
+        freecamTarget = val
+        if freecamEnabled then
+            WindUI:Notify({
+                Title = "Spectating",
+                Content = val,
+                Icon = "video",
+            })
         end
     end
 })
 
-VisualsTab:Toggle({
-    Title = "Remove Fog",
-    Desc = "Disable all fog effects",
-    Default = false,
-    Callback = function(state)
-        if state then
-            Lighting.FogEnd = 100000
-        else
-            Lighting.FogEnd = 500
-        end
-    end
-})
+FreecamGroup:Space()
 
--- Misc Tab
-MiscTab:Section({
-    Title = "⚡ Utilities ⚡",
-})
-
-MiscTab:Toggle({
-    Title = "Anti-AFK",
-    Desc = "Prevents being kicked for inactivity",
-    Default = false,
-    Callback = function(state)
-        toggleAntiAFK(state)
-    end
-})
-
-MiscTab:Space()
-
-MiscTab:Button({
-    Title = "Rejoin Server",
+FreecamGroup:Button({
+    Title = "Refresh Spectate List",
     Icon = "refresh-cw",
+    Justify = "Center",
+    Color = Colors.Cyan,
     Callback = function()
-        local TeleportService = game:GetService("TeleportService")
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end
-})
-
-MiscTab:Button({
-    Title = "Server Hop",
-    Icon = "shuffle",
-    Callback = function()
-        local TeleportService = game:GetService("TeleportService")
-        local HttpService = game:GetService("HttpService")
-        
-        local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-        
-        for _, server in pairs(servers.data) do
-            if server.playing < server.maxPlayers and server.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
-                break
-            end
-        end
-    end
-})
-
-MiscTab:Space()
-
-MiscTab:Section({
-    Title = "🎮 Game Info 🎮",
-})
-
-MiscTab:Button({
-    Title = "Show Player Stats",
-    Icon = "bar-chart",
-    Callback = function()
-        local stats = string.format(
-            "Players: %d/%d\nPing: %dms\nFPS: %d",
-            #Players:GetPlayers(),
-            Players.MaxPlayers,
-            math.floor(LocalPlayer:GetNetworkPing() * 1000),
-            math.floor(1 / RunService.Heartbeat:Wait())
-        )
-        
+        playerNames = updatePlayerList()
+        FreecamDropdown:Refresh(playerNames)
         WindUI:Notify({
-            Title = "Stats",
-            Content = stats,
-            Icon = "info",
-        })
-    end
-})
-
-MiscTab:Button({
-    Title = "Copy Game ID",
-    Icon = "copy",
-    Callback = function()
-        setclipboard(tostring(game.PlaceId))
-        WindUI:Notify({
-            Title = "Copied",
-            Content = "Game ID: " .. game.PlaceId,
+            Title = "Spectate List",
+            Content = "Refreshed successfully",
             Icon = "check",
         })
     end
 })
 
-MiscTab:Button({
-    Title = "Copy Player Location",
-    Icon = "map-pin",
+TeleportTab:Space()
+
+local FreecamToggleGroup = TeleportTab:Group({})
+
+FreecamToggleGroup:Toggle({
+    Title = "Enable Freecam Spectate",
+    Desc = "Follow selected player with freecam",
+    Callback = function(state)
+        freecamEnabled = state
+        if state then
+            if not freecamTarget then
+                WindUI:Notify({
+                    Title = "Error",
+                    Content = "No player selected to spectate",
+                    Icon = "alert-circle",
+                })
+                freecamEnabled = false
+                return
+            end
+            startFreecam()
+            WindUI:Notify({
+                Title = "Freecam Enabled",
+                Content = "Spectating " .. freecamTarget,
+                Icon = "video",
+            })
+        else
+            stopFreecam()
+            WindUI:Notify({
+                Title = "Freecam Disabled",
+                Content = "Camera returned to normal",
+                Icon = "x",
+            })
+        end
+    end
+})
+
+TeleportTab:Space()
+
+TeleportTab:Section({
+    Title = "⚡ Quick Movement",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local QuickMoveGroup = TeleportTab:Group({})
+
+QuickMoveGroup:Button({
+    Title = "Up (+100)",
+    Icon = "arrow-up-circle",
     Callback = function()
         local hrp = getRootPart()
-        if hrp then
-            local pos = hrp.Position
-            local locationString = string.format("CFrame.new(%.2f, %.2f, %.2f)", pos.X, pos.Y, pos.Z)
-            setclipboard(locationString)
+        if hrp then 
+            teleportTo(hrp.CFrame + Vector3.new(0, 100, 0))
             WindUI:Notify({
-                Title = "Location Copied",
-                Content = string.format("X: %.0f, Y: %.0f, Z: %.0f", pos.X, pos.Y, pos.Z),
-                Icon = "map-pin",
-            })
-        else
-            WindUI:Notify({
-                Title = "Error",
-                Content = "Player not found",
-                Icon = "alert-circle",
+                Title = "Moved Up",
+                Content = "+100 studs",
+                Icon = "arrow-up",
             })
         end
     end
 })
 
-MiscTab:Toggle({
-    Title = "Auto Player Stats",
-    Desc = "send player stats every 3s",
-    Default = false,
+QuickMoveGroup:Space()
+
+QuickMoveGroup:Button({
+    Title = "Down (-100)",
+    Icon = "arrow-down-circle",
+    Callback = function()
+        local hrp = getRootPart()
+        if hrp then 
+            teleportTo(hrp.CFrame - Vector3.new(0, 100, 0))
+            WindUI:Notify({
+                Title = "Moved Down",
+                Content = "-100 studs",
+                Icon = "arrow-down",
+            })
+        end
+    end
+})
+
+TeleportTab:Space()
+
+local HorizontalGroup = TeleportTab:Group({})
+
+HorizontalGroup:Button({
+    Title = "Forward (+50)",
+    Icon = "arrow-right-circle",
+    Callback = function()
+        local hrp = getRootPart()
+        if not hrp then return end
+        local forward = hrp.CFrame.LookVector * 50
+        teleportTo(hrp.CFrame + forward)
+        WindUI:Notify({
+            Title = "Moved Forward",
+            Content = "+50 studs",
+            Icon = "arrow-right",
+        })
+    end
+})
+
+HorizontalGroup:Space()
+
+HorizontalGroup:Button({
+    Title = "Backward (-50)",
+    Icon = "arrow-left-circle",
+    Callback = function()
+        local hrp = getRootPart()
+        if not hrp then return end
+        local backward = -hrp.CFrame.LookVector * 50
+        teleportTo(hrp.CFrame + backward)
+        WindUI:Notify({
+            Title = "Moved Backward",
+            Content = "-50 studs",
+            Icon = "arrow-left",
+        })
+    end
+})
+
+-- ========================================
+-- 👁️ VISUALS TAB
+-- ========================================
+local VisualsTab = VisualsSection:Tab({
+    Title = "Visuals",
+    Icon = "eye",
+    IconColor = Colors.Purple,
+    IconShape = "Square",
+})
+
+VisualsTab:Section({
+    Title = "🔍 ESP Settings",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+VisualsTab:Toggle({
+    Title = "Player ESP",
+    Desc = "See all players through walls with highlights",
     Callback = function(state)
-        if state then
-            -- Startet einen Heartbeat‑Loop, der alle 3 s eine Notify schickt
-            MiscTab.AutoInfoConn = RunService.Heartbeat:Connect(function(step)
-                MiscTab.AutoInfoTimer = (MiscTab.AutoInfoTimer or 0) + step
-                if MiscTab.AutoInfoTimer >= 3 then
-                    MiscTab.AutoInfoTimer = 0
-
-                    local stats = string.format(
-                        "Players: %d/%d\nPing: %d ms\nFPS: %d",
-                        #Players:GetPlayers(),
-                        Players.MaxPlayers,
-                        math.floor(LocalPlayer:GetNetworkPing() * 1000),
-                        math.floor(1 / RunService.Heartbeat:Wait())
-                    )
-
-                    WindUI:Notify({
-                        Title = "Auto‑Info",
-                        Content = stats,
-                        Icon = "info",
-                    })
-                end
-            end)
-        else
-            -- Stoppt den Loop, wenn er aktiv ist
-            if MiscTab.AutoInfoConn then
-                MiscTab.AutoInfoConn:Disconnect()
-                MiscTab.AutoInfoConn = nil
-                MiscTab.AutoInfoTimer = nil
-            end
-        end
+        toggleESP(state)
+        WindUI:Notify({
+            Title = "Player ESP",
+            Content = state and "Enabled" or "Disabled",
+            Icon = state and "eye" or "eye-off",
+        })
     end
 })
 
--- Performance Tab
-PerformanceTab:Section({
-    Title = "🚀 Graphics & Performance 🚀",
+VisualsTab:Space()
+
+VisualsTab:Section({
+    Title = "📷 Camera Settings",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
-PerformanceTab:Toggle({
+VisualsTab:Input({
+    Title = "Field of View (FOV)",
+    Value = "70",
+    InputIcon = "maximize",
+    Type = "Input",
+    Placeholder = "70 - 120",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 70 and num <= 120 then
+            setFOV(num)
+            WindUI:Notify({
+                Title = "FOV Changed",
+                Content = "Set to " .. num,
+                Icon = "check",
+            })
+        end
+    end,
+})
+
+-- ========================================
+-- ⚡ PERFORMANCE TAB
+-- ========================================
+local PerformanceTab = PerformanceSection:Tab({
+    Title = "Performance",
+    Icon = "gauge",
+    IconColor = Colors.Red,
+    IconShape = "Square",
+})
+
+PerformanceTab:Section({
+    Title = "🎮 Graphics Optimization",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local GraphicsGroup = PerformanceTab:Group({})
+
+GraphicsGroup:Toggle({
     Title = "Disable 3D Rendering",
-    Desc = "Show only UI - Max FPS",
-    Default = false,
+    Desc = "Show only UI for maximum FPS boost",
     Callback = function(val)
         toggle3DRendering(not val)
     end
 })
 
-PerformanceTab:Toggle({
+GraphicsGroup:Space()
+
+GraphicsGroup:Toggle({
     Title = "Low Quality Mode",
-    Desc = "Reduce game quality",
-    Default = false,
+    Desc = "Reduce graphics quality for better performance",
     Callback = function(val)
-        lowQualityMode = val
         setLowQuality(val)
     end
 })
 
-PerformanceTab:Toggle({
+PerformanceTab:Space()
+
+local EffectsGroup = PerformanceTab:Group({})
+
+EffectsGroup:Toggle({
     Title = "Performance Mode",
-    Desc = "Disables particles, shadows & effects",
-    Default = false,
+    Desc = "Disable all particles and visual effects",
     Callback = function(val)
         enablePerformanceMode(val)
     end
 })
 
-PerformanceTab:Toggle({
+EffectsGroup:Space()
+
+EffectsGroup:Toggle({
     Title = "Reduce Draw Distance",
-    Desc = "Reduces render distance for better FPS",
-    Default = false,
+    Desc = "Lower render distance for better FPS",
     Callback = function(val)
         reduceDrawDistance(val)
     end
 })
 
--- Settings Tab
-SettingsTab:Section({
-    Title = "⚙️ Teleport Settings ⚙️",
+PerformanceTab:Space()
+
+PerformanceTab:Section({
+    Title = "🚀 Teleport Settings",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
 })
 
-SettingsTab:Dropdown({
+local TpSettingsGroup = PerformanceTab:Group({})
+
+TpSettingsGroup:Dropdown({
     Title = "Teleport Method",
-    Desc = "Choose teleport method",
-    Values = { "Instant", "Tween" },
+    Desc = "Choose between instant or smooth teleport",
+    Values = {"Instant", "Tween"},
     Value = "Instant",
     Callback = function(option)
         teleportMethod = option
@@ -1245,23 +1127,215 @@ SettingsTab:Dropdown({
     end
 })
 
-SettingsTab:Slider({
+TpSettingsGroup:Space()
+
+TpSettingsGroup:Input({
     Title = "Tween Speed",
-    Desc = "Speed for Tween teleport (studs/second)",
-    Step = 5,
-    Value = {
-        Min = 10,
-        Max = 200,
-        Default = 50,
-    },
-    Callback = function(val)
-        tweenSpeed = val
+    Value = "50",
+    InputIcon = "zap",
+    Type = "Input",
+    Placeholder = "10 - 200 (studs/second)",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num and num >= 10 and num <= 200 then
+            tweenSpeed = num
+            WindUI:Notify({
+                Title = "Tween Speed",
+                Content = "Set to " .. num .. " studs/s",
+                Icon = "check",
+            })
+        end
+    end,
+})
+
+-- ========================================
+-- 🔧 MISC TAB
+-- ========================================
+local MiscTab = MiscSection:Tab({
+    Title = "Utilities",
+    Icon = "settings",
+    IconColor = Colors.Grey,
+    IconShape = "Square",
+})
+
+MiscTab:Section({
+    Title = "🌐 Server Actions",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local ServerGroup = MiscTab:Group({})
+
+ServerGroup:Button({
+    Title = "Rejoin Server",
+    Icon = "refresh-cw",
+    Justify = "Center",
+    Color = Colors.Blue,
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
     end
 })
 
--- Infinite Jump Handler
-local UserInputService = game:GetService("UserInputService")
+ServerGroup:Space()
 
+ServerGroup:Button({
+    Title = "Server Hop",
+    Icon = "shuffle",
+    Justify = "Center",
+    Color = Colors.Green,
+    Callback = function()
+        local TeleportService = game:GetService("TeleportService")
+        local HttpService = game:GetService("HttpService")
+        
+        local success, servers = pcall(function()
+            return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        end)
+        
+        if success and servers.data then
+            for _, server in pairs(servers.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
+                    WindUI:Notify({
+                        Title = "Server Hop",
+                        Content = "Joining new server...",
+                        Icon = "check",
+                    })
+                    break
+                end
+            end
+        end
+    end
+})
+
+MiscTab:Space()
+
+MiscTab:Section({
+    Title = "📊 Information & Stats",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+-- Show Server Stats button
+MiscTab:Button({
+    Title = "Show Server Stats",
+    Icon = "bar-chart",
+    Justify = "Center",
+    Color = Colors.Purple,
+    Callback = function()
+        local stats = string.format(
+            "Players: %d/%d\nPing: %dms\nFPS: %d",
+            #Players:GetPlayers(),
+            Players.MaxPlayers,
+            math.floor(LocalPlayer:GetNetworkPing() * 1000),
+            math.floor(1 / RunService.Heartbeat:Wait())
+        )
+        WindUI:Notify({
+            Title = "Server Stats",
+            Content = stats,
+            Icon = "info",
+        })
+    end,
+})
+
+MiscTab:Space()
+
+MiscTab:Toggle({
+    Title = "Auto Server Stats",
+    Default = false,
+    Callback = function(state)
+        if state then
+            MiscTab._elapsed = 0
+            MiscTab.AutoStatsConn = game:GetService("RunService").Heartbeat:Connect(function(step)
+                MiscTab._elapsed = MiscTab._elapsed + step
+                if MiscTab._elapsed >= 3 then
+                    MiscTab._elapsed = 0
+                    local stats = string.format(
+                        "Players: %d/%d\nPing: %dms\nFPS: %d",
+                        #Players:GetPlayers(),
+                        Players.MaxPlayers,
+                        math.floor(LocalPlayer:GetNetworkPing() * 1000),
+                        math.floor(1 / RunService.Heartbeat:Wait())
+                    )
+                    WindUI:Notify({
+                        Title = "Server Stats",
+                        Content = stats,
+                        Icon = "info",
+                    })
+                end
+            end)
+        else
+            if MiscTab.AutoStatsConn then
+                MiscTab.AutoStatsConn:Disconnect()
+                MiscTab.AutoStatsConn = nil
+            end
+        end
+    end,
+})
+
+MiscTab:Space()
+
+MiscTab:Section({
+    Title = "📋 Copy to Clipboard",
+    TextSize = 18,
+    FontWeight = Enum.FontWeight.SemiBold,
+})
+
+local ClipboardGroup = MiscTab:Group({})
+
+ClipboardGroup:Button({
+    Title = "Copy Game ID",
+    Icon = "copy",
+    Callback = function()
+        setclipboard(tostring(game.PlaceId))
+        WindUI:Notify({
+            Title = "Copied!",
+            Content = "Game ID: " .. game.PlaceId,
+            Icon = "check",
+        })
+    end
+})
+
+ClipboardGroup:Space()
+
+ClipboardGroup:Button({
+    Title = "Copy Job ID",
+    Icon = "hash",
+    Callback = function()
+        setclipboard(tostring(game.JobId))
+        WindUI:Notify({
+            Title = "Copied!",
+            Content = "Job ID copied to clipboard",
+            Icon = "check",
+        })
+    end
+})
+
+ClipboardGroup:Space()
+
+ClipboardGroup:Button({
+    Title = "Copy Current Position",
+    Icon = "map-pin",
+    Callback = function()
+        local hrp = getRootPart()
+        if hrp then
+            local pos = hrp.Position
+            local locationString = string.format("CFrame.new(%.2f, %.2f, %.2f)", pos.X, pos.Y, pos.Z)
+            setclipboard(locationString)
+            WindUI:Notify({
+                Title = "Position Copied",
+                Content = string.format("X: %.0f, Y: %.0f, Z: %.0f", pos.X, pos.Y, pos.Z),
+                Icon = "map-pin",
+            })
+        end
+    end
+})
+
+-- ========================================
+-- 🎯 EVENT HANDLERS
+-- ========================================
+
+-- Infinite Jump Handler
 UserInputService.JumpRequest:Connect(function()
     if infiniteJumpEnabled then
         local humanoid = getHumanoid()
@@ -1275,7 +1349,6 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     
-    -- Restart NoClip if it was enabled
     if noClipEnabled then
         toggleNoClip(false)
         task.wait(0.1)
@@ -1283,14 +1356,28 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     end
 end)
 
--- Cleanup
+-- ESP Player Added Handler
+Players.PlayerAdded:Connect(function(player)
+    if espEnabled then
+        player.CharacterAdded:Connect(function()
+            wait(0.5)
+            if espEnabled then
+                createESP(player)
+            end
+        end)
+    end
+end)
+
+-- Cleanup on Close
 if game.BindToClose then
     pcall(function()
         game:BindToClose(function()
             toggleNoClip(false)
             toggleESP(false)
             stopLoopTp()
-            toggleAntiAFK(false)
+            if freecamEnabled then
+                stopFreecam()
+            end
         end)
     end)
 end
