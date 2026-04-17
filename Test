@@ -1,0 +1,217 @@
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+-- ========================================
+-- Window Configuration
+-- ========================================
+local Window = WindUI:CreateWindow({
+    Title = "Wonka Hub",
+    Author = "By qx0_",
+    Folder = "WonkaHub",
+    Icon = "hammer",
+    IconSize = 28,
+    NewElements = true,
+    Size = UDim2.fromOffset(700, 700),
+    HideSearchBar = true,
+    Background = "rbxassetid://71675932420310",
+    Transparent = true,
+    Theme = "Midnight",
+    
+    OpenButton = {
+        Title = "Open Wonka Hub",
+        Icon = "hammer",
+        CornerRadius = UDim.new(1, 0),
+        StrokeThickness = 3,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(170, 90, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 60, 255))
+        }),
+        Enabled = true,
+        Draggable = true,
+        OnlyMobile = false,
+    },
+    
+    Topbar = {
+        Height = 35,
+        ButtonsType = "Default",
+    }
+})
+
+Window:Tag({
+    Title = "v2.6 Universal",
+    Icon = "star",
+    Color = Color3.fromRGB(170, 90, 255)
+})
+
+-- ========================================
+-- Config & Colors
+-- ========================================
+local Colors = {
+    Purple = Color3.fromRGB(170, 90, 255),
+    DarkPurple = Color3.fromRGB(120, 60, 255),
+    Yellow = Color3.fromRGB(236, 162, 1),
+    Green = Color3.fromRGB(16, 197, 80),
+    Grey = Color3.fromRGB(131, 136, 158),
+    Blue = Color3.fromRGB(37, 122, 247),
+    Red = Color3.fromRGB(239, 79, 29),
+    Cyan = Color3.fromRGB(0, 217, 255),
+    Orange = Color3.fromRGB(255, 140, 0),
+}
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ========================================
+-- Variables
+-- ========================================
+local Connections = {}
+
+local infiniteJumpEnabled = false
+local noClipEnabled = false
+local espEnabled = false
+local loopTpEnabled = false
+local loopTpTarget = nil
+
+local freecamEnabled = false
+local freecamTarget = nil
+local freecamConnection = nil
+local originalCamera = nil
+
+local teleportMethod = "Instant"
+local tweenSpeed = 50
+local isTweening = false
+
+-- Waypoints (dynamisch pro Game)
+local waypoints = {} -- name = CFrame
+local waypointNames = {}
+local selectedWaypoint = nil
+local waypointFile = "WonkaHub/Waypoints_" .. tostring(game.PlaceId) .. ".json"
+
+-- ========================================
+-- Helper Functions
+-- ========================================
+local function getCharacter() return LocalPlayer.Character end
+local function getHumanoid() local char = getCharacter() return char and char:FindFirstChild("Humanoid") end
+local function getRootPart() local char = getCharacter() return char and char:FindFirstChild("HumanoidRootPart") end
+
+-- ========================================
+-- Waypoints System
+-- ========================================
+local function loadWaypoints()
+    pcall(function()
+        if isfile(waypointFile) then
+            local data = readfile(waypointFile)
+            waypoints = HttpService:JSONDecode(data)
+        end
+    end)
+end
+
+local function saveWaypoints()
+    pcall(function()
+        local data = HttpService:JSONEncode(waypoints)
+        writefile(waypointFile, data)
+    end)
+end
+
+local function refreshWaypointList(dropdown)
+    waypointNames = {}
+    for name in pairs(waypoints) do
+        table.insert(waypointNames, name)
+    end
+    table.sort(waypointNames)
+    if dropdown then
+        dropdown:Refresh(waypointNames)
+    end
+end
+
+local function teleportTo(targetCFrame, callback)
+    local hrp = getRootPart()
+    if not hrp then
+        WindUI:Notify({ Title = "Error", Content = "Character not found", Icon = "alert-circle" })
+        return
+    end
+
+    if teleportMethod == "Instant" then
+        hrp.CFrame = targetCFrame
+        if callback then callback() end
+    elseif teleportMethod == "Tween" then
+        if isTweening then return end
+        isTweening = true
+
+        local wasNoClipEnabled = noClipEnabled
+        if not noClipEnabled then
+            toggleNoClip(true)
+        end
+
+        local distance = (targetCFrame.Position - hrp.Position).Magnitude
+        local tweenTime = distance / tweenSpeed
+
+        local tween = TweenService:Create(hrp, TweenInfo.new(tweenTime, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+        
+        tween.Completed:Connect(function()
+            isTweening = false
+            if not wasNoClipEnabled then
+                toggleNoClip(false)
+            end
+            if callback then callback() end
+        end)
+        
+        tween:Play()
+        
+        WindUI:Notify({
+            Title = "Teleporting",
+            Content = string.format("%.0f studs (~%.1fs)", distance, tweenTime),
+            Icon = "navigation",
+        })
+    end
+end
+
+-- ========================================
+-- Core Features
+-- ========================================
+local function toggleNoClip(enabled)
+    noClipEnabled = enabled
+    if enabled then
+        if Connections.NoClip then Connections.NoClip:Disconnect() end
+        Connections.NoClip = RunService.Stepped:Connect(function()
+            if not noClipEnabled then return end
+            local char = getCharacter()
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    else
+        if Connections.NoClip then
+            Connections.NoClip:Disconnect()
+            Connections.NoClip = nil
+        end
+    end
+end
+
+local function toggleESP(enabled)
+    espEnabled = enabled
+    if enabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then createESP(player) end
+        end
+    else
+        for _, player in pairs(Players:GetPlayers()) do
+            removeESP(player)
+        end
+    end
+end
+
+-- ESP Functions (verbessert)
+local espObjects = {}
+
+local function createESP(player)
+    if player == LocalPlayer then return end
+    pcall(function
