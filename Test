@@ -1,5 +1,5 @@
 --FH
-if getgenv().WonkaHub_Running then
+if getgenv().FourHub_Running then
     warn("Script already running!")
     return
 end
@@ -1072,7 +1072,7 @@ local function PostToWebhook()
         ["embeds"] = {{
             ["description"] = desc,
             ["color"] = tonumber("ffff77", 16),
-            ["footer"] = { ["text"] = string.format("Wonka Hub â€¢ Session: %s â€¢ %s", GetSessionTime(), os.date("%x %X")) },
+            ["footer"] = { ["text"] = string.format("FourHub â€¢ Session: %s â€¢ %s", GetSessionTime(), os.date("%x %X")) },
             ["thumbnail"] = { ["url"] = catLink }
         }}
     }
@@ -1501,7 +1501,7 @@ local function SendSafetyWebhook(targetPlayer, reason)
                 { ["name"] = "Type", ["value"] = reason, ["inline"] = true },
                 { ["name"] = "ID", ["value"] = "```" .. game.JobId .. "```", ["inline"] = false }
             },
-            ["footer"] = { ["text"] = "Wonka Hub â€¢ " .. os.date("%x %X") }
+            ["footer"] = { ["text"] = "FourHub â€¢ " .. os.date("%x %X") }
         }}
     }
 
@@ -1573,7 +1573,7 @@ local function CheckPlayerForSafety(targetPlayer)
         SendSafetyWebhook(targetPlayer, "Player Join Detection")
         
         task.wait(0.5) 
-        Plr:Kick("\n[Wonka Hub]\nReason: A player joined the server (" .. targetPlayer.Name .. ")")
+        Plr:Kick("\n[FourHub]\nReason: A player joined the server (" .. targetPlayer.Name .. ")")
         return
     end
 
@@ -4320,7 +4320,7 @@ local function Func_ArtifactAutomation()
 end
 
 local Window = Library:CreateWindow({
-	Title = "Wonka Hub | SP",
+	Title = "FourHub | SP",
 	Footer = "" .. assetName .. " | by jokerbiel13 | Sailor Piece | Version 1.5 Beta",
 	NotifySide = "Right",
     Icon = tostring(theChosenOne),
@@ -4525,7 +4525,7 @@ TimeLabel = GB.Information.Left.User:AddLabel("<b>Time Left:</b> " .. initTime)
 
 task.spawn(function()
     while task.wait(5) do
-        if not getgenv().Wonka Hub_Running then break end
+        if not getgenv().FourHub_Running then break end
         
         local tier, timeLeft = GetData()
         
